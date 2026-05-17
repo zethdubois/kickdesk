@@ -23,13 +23,13 @@ func main() {
 }
 
 func printBanner() {
-	fmt.Printf("kam-suite: development command center (%s)\n", version)
+	fmt.Printf("kickdesk: development command center (%s)\n", version)
 }
 
 func printStatusStub() {
-	fmt.Println("(no apps configured yet — add ~/.config/kam-suite/config.json)")
+	fmt.Println("(no apps configured yet — add ~/.config/kickdesk/config.json)")
 }
 
 func printUsage() {
-	fmt.Fprintf(os.Stderr, "usage: kam-suite [status]\n")
+	fmt.Fprintf(os.Stderr, "usage: kickdesk [status]\n")
 }

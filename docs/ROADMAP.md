@@ -1,4 +1,4 @@
-# Kam-Suite — ROADMAP (dream)
+# Kickdesk — ROADMAP (dream)
 
 Ideas for **after** [NOW.md](NOW.md) is a daily driver. Not committed, not scheduled — a parking lot so the v0 spec stays honest.
 
@@ -7,20 +7,20 @@ Ideas for **after** [NOW.md](NOW.md) is a daily driver. Not committed, not sched
 - **Web dashboard** — all apps on one page; start/stop/build from the browser
 - **Live updates** — websockets or SSE for status changes
 - **Dedicated suite port** — e.g. dashboard on `:9000`
-- **`kam-suite focus`** — if not shipped in v0, polish into a persistent "working on X" mode
-- **`kam-suite logs <app>`** — unified log tail per app
+- **`kickdesk focus`** — if not shipped in v0, polish into a persistent "working on X" mode
+- **`kickdesk logs <app>`** — unified log tail per app
 
 ## Smarter status
 
 - HTTP **health check** endpoints per app
 - **Resource usage** — CPU/memory per process
-- **Process ownership** — "started by kam-suite" vs orphan; PID files
+- **Process ownership** — "started by kickdesk" vs orphan; PID files
 - **Last health result** and timestamp in status output
 
 ## Configuration & environments
 
 - **Config in project root** as an alternative to `~/.config/…`
-- **CLI config wizard** — `kam-suite config add` interactively
+- **CLI config wizard** — `kickdesk config add` interactively
 - **Templates** by stack (node, docker, python, …)
 - **Environment overrides** — dev / staging command sets
 - **`depends_on`** — ordered `up --all` when apps rely on each other

@@ -1,4 +1,4 @@
-# Kam-Suite — NOW (v0)
+# Kickdesk — NOW (v0)
 
 Everything in this doc is in scope for the first usable version. If it's not here, don't build it yet.
 
@@ -35,7 +35,7 @@ Optional later in config: `depends_on` so `up --all` starts in order.
 
 ## Configuration
 
-**Location:** `~/.config/kam-suite/config.json`
+**Location:** `~/.config/kickdesk/config.json`
 
 **Schema (v0):**
 
@@ -73,14 +73,14 @@ Per app:
 
 | Command | Behavior |
 |---------|----------|
-| `kam-suite status` | Table: app, running?, port(s) in use, git branch, dirty?, URL |
-| `kam-suite up [app\|--all]` | Run `commands.up`; detect port conflicts first |
-| `kam-suite down [app\|--all]` | Run `commands.down` |
-| `kam-suite build [app\|--all]` | Run `commands.build`; parallel for `--all` |
-| `kam-suite run <app> <key>` | Run `commands.<key>` (operate layer) |
-| `kam-suite config validate` | Paths exist; ports not double-booked across apps |
+| `kickdesk status` | Table: app, running?, port(s) in use, git branch, dirty?, URL |
+| `kickdesk up [app\|--all]` | Run `commands.up`; detect port conflicts first |
+| `kickdesk down [app\|--all]` | Run `commands.down` |
+| `kickdesk build [app\|--all]` | Run `commands.build`; parallel for `--all` |
+| `kickdesk run <app> <key>` | Run `commands.<key>` (operate layer) |
+| `kickdesk config validate` | Paths exist; ports not double-booked across apps |
 
-Optional nice-to-have in v0 if cheap: `kam-suite focus <app>` — same as status but visually emphasizes one app.
+Optional nice-to-have in v0 if cheap: `kickdesk focus <app>` — same as status but visually emphasizes one app.
 
 ## Status output
 
