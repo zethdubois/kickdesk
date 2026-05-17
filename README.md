@@ -1,94 +1,42 @@
-# Kam-Suite: Development Environment Management Tool - Specification
+# Kam-Suite
 
-## 1. Overview
+A personal command center for working on multiple apps at once: one place to see **status**, run **builds**, and **operate** each project without keeping three mental stacks in your head.
 
-Kam-Suite is a command-line tool designed to manage and monitor a suite of business applications during development. It provides a centralized interface for tracking application status, managing ports, and executing common development commands across multiple repositories.
+**Problem:** You juggle three tools/repos. It's easy to forget what's running, which port is which, and how to start or build each one.
 
-## 2. Core Objectives
+**Success (v0):** `kam-suite status` answers that in under a second. `kam-suite up <name>` and `kam-suite run <name> <task>` work reliably every time.
 
-- Provide a single command interface to manage all applications in the development suite
-- Track which ports each application uses and monitor their status
-- Standardize common operations (up, down, build, serve) across heterogeneous applications
-- Enable batch operations across multiple applications
-- Support future expansion to a web-based dashboard
+## Docs
 
-## 3. Architecture
+| Doc | Purpose |
+|-----|---------|
+| [docs/NOW.md](docs/NOW.md) | What we're building first — scope, commands, config, non-goals |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Later ideas — dashboard, plugins, CI, team features |
 
-### 3.1 Configuration System
+Build and design decisions should satisfy **NOW** first. Anything in **ROADMAP** is explicitly out of scope until daily use proves the core.
 
-- Primary configuration file: `kam-suite.json` (stored in user's home directory or project root)
-- Application definitions include:
-  * Repository path
-  * Port assignment
-  * Health check endpoint (optional)
-  * Custom commands for up/down/build/serve operations
-  * Application type (node, docker, python, etc.)
+## Quick orientation
 
-### 3.2 Command Structure
+```bash
+kam-suite status              # what's running, ports, git branch, URLs
+kam-suite up|down|build app   # lifecycle per app or --all
+kam-suite run app test        # named "operate" commands (migrate, test, …)
+kam-suite config validate     # paths exist, ports free
+```
 
-The tool should support these primary commands:
-- `kam-suite status` - Show status of all applications
-- `kam-suite up [app-name]` - Start specific application or all
-- `kam-suite down [app-name]` - Stop specific application or all
-- `kam-suite build [app-name]` - Build specific application or all
-- `kam-suite serve [app-name]` - Serve specific application or all
-- `kam-suite logs [app-name]` - Show logs for specific application
-- `kam-suite config` - Manage configuration
+Config lives at `~/.config/kam-suite/config.json` (see [docs/NOW.md](docs/NOW.md) for schema).
 
-### 3.3 Status Monitoring
+## Development (Go)
 
-For each application, the tool should track:
-- Process status (running/stopped)
-- Port availability and usage
-- Last known health check result (if endpoint defined)
-- Resource usage (optional, CPU/memory)
+Requires Go 1.21+. If `go` is not on your PATH, install from [go.dev/dl](https://go.dev/dl/) or use `~/.local/go` after extracting the official tarball.
 
-## 4. Implementation Requirements
+```bash
+export PATH="$HOME/.local/go/bin:$HOME/go/bin:$PATH"   # add to ~/.bashrc
 
-### 4.1 Core Functionality
-
-- Process management (start/stop/check status)
-- Port scanning and monitoring
-- Command execution in appropriate directories
-- Concurrent operations for batch commands
-- Error handling and reporting
-- Colored terminal output for status indication
-
-### 4.2 Configuration Management
-
-- JSON-based configuration file
-- Command-line configuration interface
-- Default templates for common application types
-- Environment-specific overrides (development/staging)
-
-### 4.3 Extensibility
-
-- Plugin system for custom application types
-- Hook system for pre/post command execution
-- Custom status indicators
-
-## 5. Future Expansion Paths
-
-### 5.1 Web Dashboard
-
-- Simple web interface showing all application statuses
-- Real-time updates via websockets
-- Control interface for all operations
-- Self-hosting on dedicated port (e.g., 9000)
-
-### 5.2 Advanced Features
-
-- Automated dependency management
-- Integration with CI/CD pipelines
-- Resource usage tracking and alerts
-- Team collaboration features
-
-## 6. Technical Considerations
-
-- Single binary deployment with no external dependencies
-- Cross-platform compatibility (Linux, macOS, Windows)
-- Minimal resource footprint
-- Fast startup and execution
-- Clear, actionable error messages
-
-Would you like me to elaborate on any particular section of this specification?
+cd ~/projects/kam-suite
+go run .                  # banner
+go run . status           # status stub
+go build -o bin/kam-suite .
+./bin/kam-suite status
+go install .              # installs to ~/go/bin/kam-suite
+```
