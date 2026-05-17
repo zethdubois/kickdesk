@@ -28,11 +28,11 @@
       "ports": [7099],
       "url": "http://127.0.0.1:7099/manifest.json",
       "workflows": {
-        "start": ["build", "up"],
+        "start": ["build", "publish", "up"],
         "stop": ["stop-server"]
       },
       "commands": {
-        "up": "pnpm serve-publish -- --port 7099",
+        "up": "pnpm serve-publish -- --dir publish --port 7099",
         "down": "true",
         "build": "pnpm build",
         "test": "pnpm test",

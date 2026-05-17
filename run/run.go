@@ -23,6 +23,17 @@ func Execute(cfg *config.Config, appName, key string) error {
 	if err != nil {
 		return err
 	}
+	if IsBlocking(key, shell) {
+		opened, launchErr := LaunchInTerminal(dir, shell)
+		if launchErr != nil {
+			return launchErr
+		}
+		if opened {
+			fmt.Println("(started in new terminal)")
+			return nil
+		}
+		fmt.Fprintln(os.Stderr, "warning: no terminal emulator found; running inline (Ctrl+C returns to menu)")
+	}
 	return executeShell(dir, shell)
 }
 

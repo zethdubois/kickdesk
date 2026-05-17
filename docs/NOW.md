@@ -26,10 +26,10 @@ One CLI cockpit for **three apps** during active development:
 | App | Family | Ports (role) | URL |
 |-----|--------|--------------|-----|
 | `publicweb` | 50xx | app 5000, db 5043 | http://localhost:5000 |
-| `kickagent` | 70xx | publish 7099, standalone 7098 | http://127.0.0.1:7099/manifest.json |
+| `kickagent` | 70xx | publish 7099 (PW contract), standalone 7098 (KA dev only) | http://127.0.0.1:7099/manifest.json |
 | `merch-api` | 80xx | api 8000, gateway 8001, db 8043 | http://localhost:8000/docs |
 
-See [DEV_PORTS.md](DEV_PORTS.md) for the full map. Template: [examples/config.json](../examples/config.json) → copy to `~/.config/kickdesk/config.json`.
+See [DEV_PORTS.md](DEV_PORTS.md) for the org port matrix. Kickagent port semantics: `kickagent/docs/ports.md` in that repo. Template: [examples/config.json](../examples/config.json) → copy to `~/.config/kickdesk/config.json`.
 
 Optional later in config: `depends_on` so `up --all` starts in order.
 
@@ -89,12 +89,19 @@ Exit `0` for `ok` and `pending:N`; non-zero on unexpected failure (kickdesk show
 
 | Command | Behavior |
 |---------|----------|
-| `kickdesk` / `kickdesk menu` | Hub: apps in `app_order` (1–3). Pick app → startup or shutdown workflow from `workflows` + `primary_port` |
+| `kickdesk` / `kickdesk menu` | Single hotkey screen: status table + optional workflow under selected app (1–3) |
 | `kickdesk status` | Table: app, ports, migrate pending?, git branch, dirty?, URL |
 | `kickdesk run <app> <key>` | Run `commands.<key>` in app repo (non-interactive) |
 | `kickdesk config validate` | Paths, ports, workflows, required commands |
 
-Workflow screen: **Space** next step, **Enter** run all, **b** back, **c** catalog (single key).
+**Menu keys (no Enter required):**
+
+| Context | Keys |
+|---------|------|
+| Hub | `1`–`3` select app, `r` refresh, `q` quit |
+| App selected | `Space` next step, `Enter` all remaining, `1`–`N` run one step, `b`/`Esc` back, `c` catalog, `r` refresh, `q` quit |
+
+After a full procedure or **Enter**-all, **Space** returns to the menu so logs stay visible. Blocking commands (`up`, dev servers) open in a new terminal when possible (`KICKDESK_TERMINAL` or auto-detect). The `migrate` workflow step is omitted when **MIGRATE** is `ok` or `n/a`; it stays when `pending:N` or `unavailable`.
 
 Config adds `app_order`, `primary_port`, and per-app `workflows.start` / `workflows.stop` (ordered command keys).
 

@@ -26,7 +26,7 @@ kickdesk run publicweb test # run one command without the menu
 kickdesk config validate    # paths, ports, workflows
 ```
 
-In the app workflow: **Space** = next step, **Enter** = run full procedure, **b** = back, **c** = command catalog (single key, no typing Enter after).
+Single hotkey menu (no Enter): **1–3** select app, then **Space** = next step, **Enter** = all remaining, **1–N** = run one step, **b** = back, **c** = catalog, **r** = refresh, **q** = quit. After a procedure finishes, **Space** returns to the menu so you can read logs. Dev servers (`up`) open in a new terminal when possible; set `KICKDESK_TERMINAL` (e.g. `gnome-terminal --`) to override auto-detect.
 
 Config lives at `~/.config/kickdesk/config.json` (see [docs/NOW.md](docs/NOW.md) for schema). Apps with a database can define an optional `migrate-status` command; kickdesk runs it when the db port is up and shows **MIGRATE** (`ok`, `pending:N`, or `unavailable`). See `examples/config.json` for publicweb and merch-api.
 

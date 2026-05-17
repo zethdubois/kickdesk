@@ -25,13 +25,29 @@ Canonical local port map for Kick Asset Management repos on one machine. **kickd
 |--------|-----|------|------|----------------|
 | 50xx | publicweb | HTTP | **5000** | `vite.config.ts` `server.port`, `strictPort: true` |
 | 50xx | publicweb | Postgres | **5043** | `DATABASE_URL_DEV`, `scripts/compose.sh` |
-| 70xx | kickagent | manifest publish | **7099** | `KICKAGENT_PUBLISH_PORT`, `PUBLIC_KICKAGENT_MANIFEST_URL` |
-| 70xx | kickagent | standalone API | **7098** | `PORT` in `standalone.ts` |
+| 70xx | kickagent | publish (contract server) | **7099** | `KICKAGENT_PUBLISH_PORT`, `KICKAGENT_MANIFEST_URL` — **publicweb Phase 2** |
+| 70xx | kickagent | standalone (dev HTTP) | **7098** | `PORT` in `standalone.ts` — kickagent-only; **do not** point PW here |
 | 80xx | merch-api | FastAPI | **8000** | `API_PORT` |
 | 80xx | merch-api | gateway | **8001** | `PORT` in `gateway/src/server.js` |
 | 80xx | merch-api | Postgres | **8043** | `POSTGRES_PORT`, `DATABASE_URL` |
 
 **Cross-family link:** publicweb loads kickagent from `http://127.0.0.1:7099/manifest.json` — intentional, not a collision.
+
+## kickagent (70xx) — two HTTP servers
+
+kickdesk `primary_port` and `url` use **7099** (publish / contract). Status also tracks **7098** (standalone).
+
+| Port | Role | Start (typical) | Who uses it |
+|------|------|-----------------|-------------|
+| **7099** | Publish server — `manifest.json` + ESM bundle | `pnpm serve-publish` / kickdesk `up` | **publicweb**, Phase 2 integration |
+| **7098** | Standalone dev HTTP — `/hello`, `/health` | `pnpm standalone` | Kickagent dev smoke tests only |
+
+**kickdesk startup order:** `build` → `publish` (bundle + `manifest.json` + sha256 for `--base-url http://127.0.0.1:7099`) → `up` (serve `publish/` on 7099). Skipping `publish` after a rebuild leaves PW loading a stale hash or wrong `moduleUrl`.
+
+- **`pnpm start`** in kickagent is the **CLI**, not standalone or `serve-publish`.
+- Hosts must **not** aim publicweb at 7098 for the plugin contract; use 7099.
+
+**Canonical detail in the kickagent repo:** `~/projects/kickagent/docs/ports.md` (`docs/ports.md` in that checkout).
 
 ## Ports we deliberately avoid on the host
 
