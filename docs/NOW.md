@@ -23,13 +23,13 @@ One CLI cockpit for **three apps** during active development:
 
 ## App registry
 
-Fill in the three tools you care about. Example shape:
+| App | Family | Ports (role) | URL |
+|-----|--------|--------------|-----|
+| `publicweb` | 50xx | app 5000, db 5043 | http://localhost:5000 |
+| `kickagent` | 70xx | publish 7099, standalone 7098 | http://127.0.0.1:7099/manifest.json |
+| `merch-api` | 80xx | api 8000, gateway 8001, db 8043 | http://localhost:8000/docs |
 
-| App | Repo | Port(s) | URL |
-|-----|------|---------|-----|
-| _app-a_ | `~/projects/...` | | `http://localhost:...` |
-| _app-b_ | | | |
-| _app-c_ | | | |
+See [DEV_PORTS.md](DEV_PORTS.md) for the full map. Template: [examples/config.json](../examples/config.json) → copy to `~/.config/kickdesk/config.json`.
 
 Optional later in config: `depends_on` so `up --all` starts in order.
 
@@ -41,11 +41,17 @@ Optional later in config: `depends_on` so `up --all` starts in order.
 
 ```json
 {
+  "app_order": ["publicweb", "kickagent", "merch-api"],
   "apps": {
     "app-a": {
       "path": "~/projects/foo",
+      "primary_port": 3000,
       "ports": [3000],
       "url": "http://localhost:3000",
+      "workflows": {
+        "start": ["db-up", "up"],
+        "stop": ["stop-server", "down"]
+      },
       "commands": {
         "up": "npm run dev",
         "down": "…",
@@ -67,18 +73,32 @@ Per app:
 | `url` | recommended | Shown in `status` |
 | `commands` | yes | At minimum `up`, `down`, `build`; any other key is operable via `run` |
 
+**Optional `migrate-status` command:** If present, kickdesk runs it when the app's **db** role port is up and shows a **MIGRATE** column in `status` / the hub table. Stdout contract (one line):
+
+| Output | Meaning |
+|--------|---------|
+| `ok` | DB reachable, schema matches repo migrations |
+| `pending:N` | N migrations not yet applied (N > 0) |
+| `unavailable` | Cannot determine (env, connection, etc.) |
+
+Exit `0` for `ok` and `pending:N`; non-zero on unexpected failure (kickdesk shows `error`). Workflow is unchanged — run `migrate` when the column shows pending.
+
 **`up` vs `serve`:** Use only `up` in v0 (dev server = up). Add `serve` later if an app splits infra from dev server.
 
 ## Commands (v0 only)
 
 | Command | Behavior |
 |---------|----------|
-| `kickdesk status` | Table: app, running?, port(s) in use, git branch, dirty?, URL |
-| `kickdesk up [app\|--all]` | Run `commands.up`; detect port conflicts first |
-| `kickdesk down [app\|--all]` | Run `commands.down` |
-| `kickdesk build [app\|--all]` | Run `commands.build`; parallel for `--all` |
-| `kickdesk run <app> <key>` | Run `commands.<key>` (operate layer) |
-| `kickdesk config validate` | Paths exist; ports not double-booked across apps |
+| `kickdesk` / `kickdesk menu` | Hub: apps in `app_order` (1–3). Pick app → startup or shutdown workflow from `workflows` + `primary_port` |
+| `kickdesk status` | Table: app, ports, migrate pending?, git branch, dirty?, URL |
+| `kickdesk run <app> <key>` | Run `commands.<key>` in app repo (non-interactive) |
+| `kickdesk config validate` | Paths, ports, workflows, required commands |
+
+Workflow screen: **Space** next step, **Enter** run all, **b** back, **c** catalog (single key).
+
+Config adds `app_order`, `primary_port`, and per-app `workflows.start` / `workflows.stop` (ordered command keys).
+
+Deferred: dedicated `kickdesk up|down|build` subcommands and `--all` batch.
 
 Optional nice-to-have in v0 if cheap: `kickdesk focus <app>` — same as status but visually emphasizes one app.
 
@@ -89,7 +109,8 @@ For each app, answer:
 1. Is something listening on its port(s)?
 2. Can we attribute it to a process we care about? (best-effort; perfect PID tracking is not required v0)
 3. Git: branch + clean/dirty
-4. Clickable URL
+4. Migrations: `ok`, `pending:N`, or `unavailable` (when `migrate-status` is configured and db port is up)
+5. Clickable URL
 
 Colored terminal output is fine; keep the layout stable so muscle memory works.
 
@@ -102,11 +123,11 @@ Colored terminal output is fine; keep the layout stable so muscle memory works.
 
 ## Definition of done (v0)
 
-- [ ] Config file documents three real apps
-- [ ] `status` is the daily driver
-- [ ] `up` / `down` / `build` work per app and with `--all`
-- [ ] `run` works for at least one custom command per app (e.g. `test`)
-- [ ] `config validate` catches missing paths and port clashes
+- [x] Config file documents three real apps
+- [x] `status` is the daily driver
+- [ ] `up` / `down` / `build` work per app and with `--all` (via menu/`run` today)
+- [x] `run` works for at least one custom command per app (e.g. `test`)
+- [x] `config validate` catches missing paths and port clashes
 - [ ] Used for a full day of multi-app work without reaching for ad-hoc scripts
 
 When that's true, pull ideas from [ROADMAP.md](ROADMAP.md) one at a time.

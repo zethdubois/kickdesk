@@ -1,0 +1,68 @@
+{
+  "app_order": ["publicweb", "kickagent", "merch-api"],
+  "apps": {
+    "publicweb": {
+      "path": "~/projects/publicweb",
+      "primary_port": 5000,
+      "ports": [5000],
+      "url": "http://localhost:5000",
+      "workflows": {
+        "start": ["db-up", "migrate", "up"],
+        "stop": ["stop-server", "db-down"]
+      },
+      "commands": {
+        "up": "pnpm dev",
+        "down": "pnpm db:down",
+        "build": "pnpm build",
+        "test": "pnpm check",
+        "db": "pnpm db:status",
+        "db-up": "pnpm db:up",
+        "db-down": "pnpm db:down",
+        "migrate": "pnpm db:migrate",
+        "stop-server": "fuser -k 5000/tcp 2>/dev/null || true"
+      }
+    },
+    "kickagent": {
+      "path": "~/projects/kickagent",
+      "primary_port": 7099,
+      "ports": [7099],
+      "url": "http://127.0.0.1:7099/manifest.json",
+      "workflows": {
+        "start": ["build", "up"],
+        "stop": ["stop-server"]
+      },
+      "commands": {
+        "up": "pnpm serve-publish -- --port 7099",
+        "down": "true",
+        "build": "pnpm build",
+        "test": "pnpm test",
+        "bundle": "pnpm bundle",
+        "publish": "pnpm publish:artifacts -- --base-url http://127.0.0.1:7099",
+        "stop-server": "fuser -k 7099/tcp 2>/dev/null || true"
+      }
+    },
+    "merch-api": {
+      "path": "~/projects/merch-api",
+      "primary_port": 8000,
+      "ports": [8000, 3000],
+      "url": "http://localhost:8000/docs",
+      "workflows": {
+        "start": ["db", "migrate", "up"],
+        "stop": ["stop-api", "stop-gateway", "down"]
+      },
+      "commands": {
+        "up": "make local-api-run",
+        "down": "make local-db-down",
+        "build": "make setup",
+        "health": "make local-health",
+        "ready": "make local-ready",
+        "db": "make local-db-up",
+        "db-reset": "make local-db-reset",
+        "migrate": "make local-migrate",
+        "gateway": "make local-gateway-run",
+        "stop-api": "fuser -k 8000/tcp 2>/dev/null || true",
+        "stop-gateway": "fuser -k 3000/tcp 2>/dev/null || true"
+      }
+    }
+  }
+}
