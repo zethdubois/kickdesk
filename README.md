@@ -20,13 +20,16 @@ Build and design decisions should satisfy **NOW** first. Anything in **ROADMAP**
 
 ```bash
 kickdesk                    # hub: [1] publicweb [2] kickagent [3] merch-api
-kickdesk menu               # same
+kickdesk -t 2               # tmux: 2 server panes on top, menu on bottom
+kickdesk menu               # same as (none)
 kickdesk status             # status table (ports, git, optional migrate pending)
 kickdesk run publicweb test # run one command without the menu
 kickdesk config validate    # paths, ports, workflows
 ```
 
-Single hotkey menu (no Enter): **1–3** select app, then **Space** = next step, **Enter** = all remaining, **1–N** = run one step, **b** = back, **c** = catalog, **r** = refresh, **q** = quit. After a procedure finishes, **Space** returns to the menu so you can read logs. Dev servers (`up`) open in a new terminal when possible; set `KICKDESK_TERMINAL` (e.g. `gnome-terminal --`) to override auto-detect.
+**tmux dashboard (`-t N`):** requires `tmux` on PATH. Top row gets the first **N** apps from `app_order` (e.g. `-t 2` → publicweb + kickagent). Bottom pane runs kickdesk automatically. Blocking `up` commands go to the matching top pane (not a new GUI window). Outside tmux you get a **y/N** prompt to start session `kickdesk` and attach. Inside tmux, the current window is re-layouted. If you start `kickdesk menu` manually in the bottom pane (title `kickdesk-menu`), dashboard mode is detected automatically.
+
+Single hotkey menu (no Enter): **1–3** select app, then **Space** = next step, **Enter** = all remaining, **1–N** = run one step, **b** = back, **c** = catalog, **r** = refresh, **q** = quit. After each step, **any key** continues. Without `-t`, dev servers (`up`) open in a new GUI terminal when possible (`KICKDESK_TERMINAL` or auto-detect).
 
 Config lives at `~/.config/kickdesk/config.json` (see [docs/NOW.md](docs/NOW.md) for schema). Apps with a database can define an optional `migrate-status` command; kickdesk runs it when the db port is up and shows **MIGRATE** (`ok`, `pending:N`, or `unavailable`). See `examples/config.json` for publicweb and merch-api.
 

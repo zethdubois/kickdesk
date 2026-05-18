@@ -10,6 +10,7 @@ import (
 	"github.com/Kick-Asset-Management/kickdesk/config"
 	"github.com/Kick-Asset-Management/kickdesk/run"
 	"github.com/Kick-Asset-Management/kickdesk/status"
+	"github.com/Kick-Asset-Management/kickdesk/tmux"
 )
 
 const maxCmdDisplay = 56
@@ -23,6 +24,7 @@ type menuState struct {
 
 // Run is the interactive command panel loop.
 func Run(cfg *config.Config, version string) error {
+	tmux.TryAdoptDashboard()
 	reader := bufio.NewReader(os.Stdin)
 	state := menuState{}
 	for {
@@ -74,7 +76,7 @@ func showMenu(cfg *config.Config, version string, reader *bufio.Reader, state *m
 		printWorkflow(cfg, state.selected, procedure, keys, state.completed)
 	}
 
-	printFooter(state.selected != "", len(appNames), len(keys))
+	printFooter(state.selected != "", len(appNames), len(keys), tmuxTopHint(cfg))
 
 	key, err := readKey(reader)
 	if err != nil {
@@ -110,14 +112,33 @@ func printWorkflow(cfg *config.Config, appName, procedure string, keys []string,
 		}
 		hint := ""
 		if run.IsBlocking(key, shell) {
-			hint = "  (new terminal)"
+			if _, ok := run.TmuxChildMode(); ok {
+				hint = "  (tmux pane)"
+			} else {
+				hint = "  (new terminal)"
+			}
 		}
 		fmt.Printf("  %s %-2d  %-10s  %s%s\n", mark, i+1, key, truncate(shell, maxCmdDisplay), hint)
 	}
 	fmt.Println(strings.Repeat("─", 56))
 }
 
-func printFooter(appSelected bool, appCount, stepCount int) {
+func tmuxTopHint(cfg *config.Config) string {
+	topN, ok := run.TmuxChildMode()
+	if !ok {
+		return ""
+	}
+	names := cfg.OrderedAppNames()
+	if topN > len(names) {
+		topN = len(names)
+	}
+	return fmt.Sprintf("tmux top: %s", strings.Join(names[:topN], ", "))
+}
+
+func printFooter(appSelected bool, appCount, stepCount int, tmuxHint string) {
+	if tmuxHint != "" {
+		fmt.Println(tmuxHint)
+	}
 	if appSelected {
 		fmt.Println("Space next (✓) · Enter all · 1-N run (✓ if next in order) · b back · c catalog · r refresh · q quit")
 	} else {
@@ -228,7 +249,11 @@ func runStep(cfg *config.Config, appName, key string) error {
 	fmt.Printf("\n── %s / %s ──\n", appName, key)
 	fmt.Printf("$ %s\n\n", shell)
 	if run.IsBlocking(key, shell) {
-		fmt.Println("(opens in a new terminal when supported)")
+		if _, ok := run.TmuxChildMode(); ok {
+			fmt.Println("(runs in tmux server pane above)")
+		} else {
+			fmt.Println("(opens in a new terminal when supported)")
+		}
 	}
 	return run.Execute(cfg, appName, key)
 }

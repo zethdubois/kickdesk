@@ -90,6 +90,7 @@ Exit `0` for `ok` and `pending:N`; non-zero on unexpected failure (kickdesk show
 | Command | Behavior |
 |---------|----------|
 | `kickdesk` / `kickdesk menu` | Single hotkey screen: status table + optional workflow under selected app (1–3) |
+| `kickdesk -t N` | tmux dashboard: **N** server panes on top (`app_order[0..N-1]`), menu on bottom; blocking `up` → that app's pane |
 | `kickdesk status` | Table: app, ports, migrate pending?, git branch, dirty?, URL |
 | `kickdesk run <app> <key>` | Run `commands.<key>` in app repo (non-interactive) |
 | `kickdesk config validate` | Paths, ports, workflows, required commands |
@@ -101,7 +102,7 @@ Exit `0` for `ok` and `pending:N`; non-zero on unexpected failure (kickdesk show
 | Hub | `1`–`3` select app, `r` refresh, `q` quit |
 | App selected | `Space` next step, `Enter` all remaining, `1`–`N` run one step, `b`/`Esc` back, `c` catalog, `r` refresh, `q` quit |
 
-After a full procedure or **Enter**-all, **Space** returns to the menu so logs stay visible. Blocking commands (`up`, dev servers) open in a new terminal when possible (`KICKDESK_TERMINAL` or auto-detect). The `migrate` workflow step is omitted when **MIGRATE** is `ok` or `n/a`; it stays when `pending:N` or `unavailable`.
+After each step, **any key** continues. After a full procedure, **Space** returns to the menu. Without `-t`, blocking commands (`up`, dev servers) open in a new GUI terminal when possible (`KICKDESK_TERMINAL` or auto-detect). With `-t N`, they run in the named tmux pane (`kickdesk-publicweb`, etc.). The `migrate` workflow step is omitted when **MIGRATE** is `ok` or `n/a`.
 
 Config adds `app_order`, `primary_port`, and per-app `workflows.start` / `workflows.stop` (ordered command keys).
 

@@ -24,6 +24,14 @@ func Execute(cfg *config.Config, appName, key string) error {
 		return err
 	}
 	if IsBlocking(key, shell) {
+		sent, tmuxErr := LaunchInTmuxPane(cfg, appName, dir, shell)
+		if tmuxErr != nil {
+			return tmuxErr
+		}
+		if sent {
+			fmt.Printf("(started in tmux pane: %s)\n", appName)
+			return nil
+		}
 		opened, launchErr := LaunchInTerminal(dir, shell)
 		if launchErr != nil {
 			return launchErr
