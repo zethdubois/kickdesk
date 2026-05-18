@@ -13,7 +13,7 @@ import (
 var ansiStrip = regexp.MustCompile(`\033\[[0-9;]*m`)
 
 type ansiStyle struct {
-	bold, dim, green, red, yellow, cyan, reset string
+	bold, dim, green, red, yellow, cyan, focus, reset string
 }
 
 func stdoutStyle() ansiStyle {
@@ -25,9 +25,17 @@ func stdoutStyle() ansiStyle {
 		s.red = "\033[31m"
 		s.yellow = "\033[33m"
 		s.cyan = "\033[36m"
+		s.focus = "\033[48;5;238m" // subtle row highlight for selected app
 		s.reset = "\033[0m"
 	}
 	return s
+}
+
+func wrapFocus(st ansiStyle, s string) string {
+	if st.focus == "" {
+		return s
+	}
+	return st.focus + s + st.reset
 }
 
 func visibleLen(s string) int {
@@ -130,7 +138,7 @@ func portRole(p PortLine) string {
 	return "port"
 }
 
-func renderTable(apps []AppStatus, hub bool) {
+func renderTable(apps []AppStatus, hub bool, focusApp string) {
 	st := stdoutStyle()
 	rows := buildStatusRows(apps, hub)
 
@@ -187,7 +195,7 @@ func renderTable(apps []AppStatus, hub bool) {
 	}
 
 	hr("┌", "┬", "┐", "─")
-	printTableLine(cols, header, st, "│")
+	printTableLine(cols, header, st, "│", false)
 	hr("├", "┼", "┤", "─")
 
 	rowIdx := 0
@@ -216,7 +224,8 @@ func renderTable(apps []AppStatus, hub bool) {
 					line[i] = raw
 				}
 			}
-			printTableLine(cols, line, st, "│")
+			focused := focusApp != "" && a.Name == focusApp
+			printTableLine(cols, line, st, "│", focused)
 			if pi == portCount-1 && ai < len(apps)-1 {
 				hr("├", "┼", "┤", "─")
 			}
@@ -225,7 +234,7 @@ func renderTable(apps []AppStatus, hub bool) {
 	hr("└", "┴", "┘", "─")
 }
 
-func printTableLine(cols []tableCol, cells []string, st ansiStyle, border string) {
+func printTableLine(cols []tableCol, cells []string, st ansiStyle, border string, focused bool) {
 	var b strings.Builder
 	b.WriteString(border)
 	for i, c := range cols {
@@ -236,8 +245,12 @@ func printTableLine(cols []tableCol, cells []string, st ansiStyle, border string
 		if i < len(cells) {
 			cell = cells[i]
 		}
+		padded := padVisible(cell, c.width)
+		if focused {
+			padded = wrapFocus(st, padded)
+		}
 		b.WriteString(" ")
-		b.WriteString(padVisible(cell, c.width))
+		b.WriteString(padded)
 		b.WriteString(" ")
 	}
 	b.WriteString(border)
@@ -330,7 +343,7 @@ func renderAppPortTable(ports []PortLine) {
 		header[i] = st.bold + st.cyan + c.title + st.reset
 	}
 	hr("┌", "┬", "┐", "─")
-	printTableLine(cols, header, st, "│")
+	printTableLine(cols, header, st, "│", false)
 	hr("├", "┼", "┤", "─")
 	for _, r := range rows {
 		line := []string{
@@ -338,7 +351,7 @@ func renderAppPortTable(ports []PortLine) {
 			r.cells[1].text,
 			styleState(st, r.cells[2].text),
 		}
-		printTableLine(cols, line, st, "│")
+		printTableLine(cols, line, st, "│", false)
 	}
 	hr("└", "┴", "┘", "─")
 }

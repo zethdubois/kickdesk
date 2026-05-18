@@ -45,7 +45,7 @@ func showMenu(cfg *config.Config, version string, reader *bufio.Reader, state *m
 	if err != nil {
 		return err
 	}
-	status.PrintHub(apps)
+	status.PrintHub(apps, state.selected)
 
 	appNames := cfg.OrderedAppNames()
 	var keys []string

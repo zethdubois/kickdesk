@@ -179,12 +179,13 @@ func formatGit(branch, dirty string) string {
 
 // Print writes the bordered status table (kickdesk status).
 func Print(apps []AppStatus) {
-	renderTable(apps, false)
+	renderTable(apps, false, "")
 }
 
 // PrintHub prints the status table with hotkey column [1], [2], ...
-func PrintHub(apps []AppStatus) {
-	renderTable(apps, true)
+// focusApp highlights that app's row(s) when non-empty (e.g. active submenu).
+func PrintHub(apps []AppStatus, focusApp string) {
+	renderTable(apps, true, focusApp)
 }
 
 // PrintAppSummary prints one app's ports (for workflow screen header).
