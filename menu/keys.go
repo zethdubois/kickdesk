@@ -52,75 +52,37 @@ func readKey(reader *bufio.Reader) (byte, error) {
 	return buf[0], nil
 }
 
+// waitFor pauses until accept returns true for a key (nil accept = any key except q).
+func waitFor(reader *bufio.Reader, prompt string, accept func(byte) bool) error {
+	fmt.Print(prompt)
+	fd := int(os.Stdin.Fd())
+	if term.IsTerminal(fd) {
+		for {
+			k, err := readKey(reader)
+			if errors.Is(err, errQuit) {
+				return errQuit
+			}
+			if err != nil {
+				return err
+			}
+			if k == 'q' || k == 'Q' {
+				return errQuit
+			}
+			if accept == nil || accept(k) {
+				return nil
+			}
+		}
+	}
+	_, err := reader.ReadString('\n')
+	return err
+}
+
 // waitAnyKeyOrQuit pauses so command output can be read; any key continues, q quits.
 func waitAnyKeyOrQuit(reader *bufio.Reader) error {
-	fmt.Print("\nPress any key to continue (q quit)...")
-	fd := int(os.Stdin.Fd())
-	if term.IsTerminal(fd) {
-		for {
-			k, err := readKey(reader)
-			if errors.Is(err, errQuit) {
-				return errQuit
-			}
-			if err != nil {
-				return err
-			}
-			if k == 'q' || k == 'Q' {
-				return errQuit
-			}
-			return nil
-		}
-	}
-	_, err := reader.ReadString('\n')
-	return err
+	return waitFor(reader, "\nPress any key to continue (q quit)...", nil)
 }
 
-// waitSpaceOrQuit waits for Space to continue or q to quit (after a full procedure).
-func waitSpaceOrQuit(reader *bufio.Reader) error {
-	fmt.Print("\nPress Space to return to menu (q quit)...")
-	fd := int(os.Stdin.Fd())
-	if term.IsTerminal(fd) {
-		for {
-			k, err := readKey(reader)
-			if errors.Is(err, errQuit) {
-				return errQuit
-			}
-			if err != nil {
-				return err
-			}
-			if k == ' ' {
-				return nil
-			}
-			if k == 'q' || k == 'Q' {
-				return errQuit
-			}
-		}
-	}
-	_, err := reader.ReadString('\n')
-	return err
-}
-
-// waitKey waits for Enter; q or Ctrl+C quits kickdesk.
-func waitKey(reader *bufio.Reader) error {
-	fmt.Print("\nPress Enter to continue (q quit)...")
-	fd := int(os.Stdin.Fd())
-	if term.IsTerminal(fd) {
-		for {
-			k, err := readKey(reader)
-			if errors.Is(err, errQuit) {
-				return errQuit
-			}
-			if err != nil {
-				return err
-			}
-			if k == '\r' || k == '\n' {
-				return nil
-			}
-			if k == 'q' || k == 'Q' {
-				return errQuit
-			}
-		}
-	}
-	_, err := reader.ReadString('\n')
-	return err
+// waitReturnToMenu pauses after a full procedure before refreshing the menu.
+func waitReturnToMenu(reader *bufio.Reader) error {
+	return waitFor(reader, "\nPress any key to return to menu (q quit)...", nil)
 }

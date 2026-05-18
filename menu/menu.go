@@ -97,7 +97,7 @@ func showMenu(cfg *config.Config, version string, reader *bufio.Reader, state *m
 	if state.selected == "" {
 		return handleHubKey(cfg, reader, state, appNames, key)
 	}
-	return handleAppKey(cfg, reader, state, key, keys, running)
+	return handleAppKey(cfg, reader, state, key, keys)
 }
 
 func printWorkflow(cfg *config.Config, appName, procedure string, keys []string, completed int) {
@@ -162,7 +162,7 @@ func handleHubKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ap
 	return nil
 }
 
-func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, key byte, keys []string, wasRunning bool) error {
+func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, key byte, keys []string) error {
 	appName := state.selected
 
 	switch key {
@@ -182,12 +182,12 @@ func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ke
 			} else {
 				state.completed++
 			}
+			if state.completed >= len(keys) {
+				return afterProcedureRun(reader, state)
+			}
 			if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
 				return errQuit
 			}
-		}
-		if state.completed >= len(keys) {
-			return afterProcedureRun(cfg, reader, state, appName, wasRunning)
 		}
 	case '\r', '\n':
 		remaining := keys[state.completed:]
@@ -197,10 +197,7 @@ func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ke
 		if err := run.ExecuteSequence(cfg, appName, remaining); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		}
-		if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
-			return errQuit
-		}
-		return afterProcedureRun(cfg, reader, state, appName, wasRunning)
+		return afterProcedureRun(reader, state)
 	default:
 		if key >= '1' && key <= '9' {
 			idx := int(key - '1')
@@ -210,11 +207,11 @@ func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ke
 				} else if idx == state.completed {
 					state.completed++
 				}
+				if state.completed >= len(keys) {
+					return afterProcedureRun(reader, state)
+				}
 				if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
 					return errQuit
-				}
-				if state.completed >= len(keys) {
-					return afterProcedureRun(cfg, reader, state, appName, wasRunning)
 				}
 				return nil
 			}
@@ -227,17 +224,9 @@ func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ke
 	return nil
 }
 
-func afterProcedureRun(cfg *config.Config, reader *bufio.Reader, state *menuState, appName string, wasRunning bool) error {
-	nowRunning := status.AppRunning(cfg, appName)
-	if nowRunning != wasRunning {
-		if werr := waitSpaceOrQuit(reader); errors.Is(werr, errQuit) {
-			return errQuit
-		}
-		state.completed = 0
-		return nil
-	}
+func afterProcedureRun(reader *bufio.Reader, state *menuState) error {
 	state.completed = 0
-	if werr := waitSpaceOrQuit(reader); errors.Is(werr, errQuit) {
+	if werr := waitReturnToMenu(reader); errors.Is(werr, errQuit) {
 		return errQuit
 	}
 	return nil
