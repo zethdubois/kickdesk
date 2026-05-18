@@ -61,7 +61,7 @@ func showMenu(cfg *config.Config, version string, reader *bufio.Reader, state *m
 		keys, err = EffectiveWorkflowKeys(cfg, state.selected, running, migrateSt)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			if werr := waitSpaceOrQuit(reader); errors.Is(werr, errQuit) {
+			if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
 				return errQuit
 			}
 			state.selected = ""
@@ -119,7 +119,7 @@ func printWorkflow(cfg *config.Config, appName, procedure string, keys []string,
 
 func printFooter(appSelected bool, appCount, stepCount int) {
 	if appSelected {
-		fmt.Println("Space next step · Enter all remaining · 1-N run step · b back · c catalog · r refresh · q quit")
+		fmt.Println("Space next (✓) · Enter all · 1-N run (✓ if next in order) · b back · c catalog · r refresh · q quit")
 	} else {
 		fmt.Printf("1-%d select app · r refresh · q quit\n", appCount)
 	}
@@ -135,7 +135,7 @@ func handleHubKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ap
 		return nil
 	}
 	fmt.Printf("Unknown key. Use 1-%d to select an app, r, or q.\n", len(appNames))
-	if werr := waitSpaceOrQuit(reader); errors.Is(werr, errQuit) {
+	if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
 		return errQuit
 	}
 	return nil
@@ -158,11 +158,11 @@ func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ke
 		if state.completed < len(keys) {
 			if err := runStep(cfg, appName, keys[state.completed]); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v\n", err)
-				if werr := waitSpaceOrQuit(reader); errors.Is(werr, errQuit) {
-					return errQuit
-				}
 			} else {
 				state.completed++
+			}
+			if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
+				return errQuit
 			}
 		}
 		if state.completed >= len(keys) {
@@ -175,9 +175,9 @@ func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ke
 		}
 		if err := run.ExecuteSequence(cfg, appName, remaining); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			if werr := waitSpaceOrQuit(reader); errors.Is(werr, errQuit) {
-				return errQuit
-			}
+		}
+		if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
+			return errQuit
 		}
 		return afterProcedureRun(cfg, reader, state, appName, wasRunning)
 	default:
@@ -186,15 +186,20 @@ func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ke
 			if idx < len(keys) {
 				if err := runStep(cfg, appName, keys[idx]); err != nil {
 					fmt.Fprintf(os.Stderr, "error: %v\n", err)
-					if werr := waitSpaceOrQuit(reader); errors.Is(werr, errQuit) {
-						return errQuit
-					}
+				} else if idx == state.completed {
+					state.completed++
+				}
+				if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
+					return errQuit
+				}
+				if state.completed >= len(keys) {
+					return afterProcedureRun(cfg, reader, state, appName, wasRunning)
 				}
 				return nil
 			}
 		}
 		fmt.Println("Unknown key. Space, Enter, 1-N, c, b, r, or q.")
-		if werr := waitSpaceOrQuit(reader); errors.Is(werr, errQuit) {
+		if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
 			return errQuit
 		}
 	}
@@ -235,13 +240,13 @@ func showCatalog(cfg *config.Config, appName string, reader *bufio.Reader) bool 
 	entries, err := cfg.CommandsList(appName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		return errors.Is(waitSpaceOrQuit(reader), errQuit)
+		return errors.Is(waitAnyKeyOrQuit(reader), errQuit)
 	}
 	for _, e := range entries {
 		fmt.Printf("  %-12s  %s\n", e.Key, truncate(e.Shell, maxCmdDisplay))
 	}
 	fmt.Println("\n  kickdesk run", appName, "<key>")
-	return errors.Is(waitSpaceOrQuit(reader), errQuit)
+	return errors.Is(waitAnyKeyOrQuit(reader), errQuit)
 }
 
 func truncate(s string, max int) string {

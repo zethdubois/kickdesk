@@ -52,7 +52,30 @@ func readKey(reader *bufio.Reader) (byte, error) {
 	return buf[0], nil
 }
 
-// waitSpaceOrQuit waits for Space to continue or q to quit (after a procedure run).
+// waitAnyKeyOrQuit pauses so command output can be read; any key continues, q quits.
+func waitAnyKeyOrQuit(reader *bufio.Reader) error {
+	fmt.Print("\nPress any key to continue (q quit)...")
+	fd := int(os.Stdin.Fd())
+	if term.IsTerminal(fd) {
+		for {
+			k, err := readKey(reader)
+			if errors.Is(err, errQuit) {
+				return errQuit
+			}
+			if err != nil {
+				return err
+			}
+			if k == 'q' || k == 'Q' {
+				return errQuit
+			}
+			return nil
+		}
+	}
+	_, err := reader.ReadString('\n')
+	return err
+}
+
+// waitSpaceOrQuit waits for Space to continue or q to quit (after a full procedure).
 func waitSpaceOrQuit(reader *bufio.Reader) error {
 	fmt.Print("\nPress Space to return to menu (q quit)...")
 	fd := int(os.Stdin.Fd())
