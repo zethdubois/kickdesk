@@ -29,51 +29,36 @@ One CLI cockpit for **three apps** during active development:
 | `kickagent` | 70xx | publish 7099 (PW contract), standalone 7098 (KA dev only) | http://127.0.0.1:7099/manifest.json |
 | `merch-api` | 80xx | api 8000, gateway 8001, db 8043 | http://localhost:8000/docs |
 
-See [DEV_PORTS.md](DEV_PORTS.md) for the org port matrix. Kickagent port semantics: `kickagent/docs/ports.md` in that repo. Template: [examples/config.json](../examples/config.json) → copy to `~/.config/kickdesk/config.json`.
+See [DEV_PORTS.md](DEV_PORTS.md) for the org port matrix. Kickagent port semantics: `kickagent/docs/ports.md` in that repo.
 
 Optional later in config: `depends_on` so `up --all` starts in order.
 
-## Configuration
+## Configuration (v0.5 modular)
 
-**Location:** `~/.config/kickdesk/config.json`
+**Cockpit:** `~/.config/kickdesk/config.json` — which repos, optional labels, `default_profile`.
 
-**Schema (v0):**
+**Per-app manifest:** ports, workflows, commands — see [MANIFEST.md](MANIFEST.md). Discovery: `~/.config/<id>/manifest.json`, repo `.kickdesk.json`, or explicit `manifest` path in registry.
 
-```json
-{
-  "app_order": ["publicweb", "kickagent", "merch-api"],
-  "apps": {
-    "app-a": {
-      "path": "~/projects/foo",
-      "primary_port": 3000,
-      "ports": [3000],
-      "url": "http://localhost:3000",
-      "workflows": {
-        "start": ["db-up", "up"],
-        "stop": ["stop-server", "down"]
-      },
-      "commands": {
-        "up": "npm run dev",
-        "down": "…",
-        "build": "npm run build",
-        "test": "npm test",
-        "migrate": "…"
-      }
-    }
-  }
-}
+**Profiles:** `~/.config/kickdesk/<name>.json` — `app_order`, labels, tmux layout (`config.json` is only the registry). **`last.cnfg`** stores the last profile chosen. `kickdesk` loads `last.cnfg`; `kickdesk -c` opens the picker.
+
+**Legacy:** monolithic `config.json` with full `apps.<id>` inline still works ([examples/config.legacy.json](../examples/config.legacy.json)).
+
+**Setup:**
+
+```bash
+mkdir -p ~/.config/kickdesk/profiles
+cp examples/config.json ~/.config/kickdesk/config.json
+cp examples/profiles/two-up.json ~/.config/kickdesk/two-up.json
+kickdesk config validate
 ```
 
-Per app:
+Thin registry: [examples/config.json](../examples/config.json). Manifest schema sample: [examples/manifest.sample.json](../examples/manifest.sample.json) (app repos publish real manifests).
 
-| Field | Required | Notes |
-|-------|----------|-------|
-| `path` | yes | Repo root; commands run here |
-| `ports` | yes | Used for status + conflict check before `up` |
-| `url` | recommended | Shown in `status` |
-| `commands` | yes | At minimum `up`, `down`, `build`; any other key is operable via `run` |
+## Migrate status
 
-**Optional `migrate-status` command:** If present, kickdesk runs it when the app's **db** role port is up and shows a **MIGRATE** column in `status` / the hub table. Stdout contract (one line):
+**File (preferred when published):** `status.migrate` in manifest → one-line file (`ok`, `pending:N`, `unavailable`).
+
+**Command (fallback):** `migrate-status` in `commands` — kickdesk runs it when the **db** port is up. Stdout contract (one line):
 
 | Output | Meaning |
 |--------|---------|
@@ -90,7 +75,9 @@ Exit `0` for `ok` and `pending:N`; non-zero on unexpected failure (kickdesk show
 | Command | Behavior |
 |---------|----------|
 | `kickdesk` / `kickdesk menu` | Single hotkey screen: status table + optional workflow under selected app (1–3) |
-| `kickdesk -t N` | tmux dashboard: **N** server panes on top (`app_order[0..N-1]`), menu on bottom; blocking `up` → that app's pane |
+| `kickdesk` | Menu using profile name in `~/.config/kickdesk/last.cnfg` |
+| `kickdesk -c` | Profile picker (hotkeys): **0** config editor (placeholder), **1–N** each `*.json` except `config.json` |
+| `kickdesk -t N` | **Deprecated** — use `-c` profile with `tmux.top`; still works with a warning |
 | `kickdesk status` | Table: app, ports, migrate pending?, git branch, dirty?, URL |
 | `kickdesk run <app> <key>` | Run `commands.<key>` in app repo (non-interactive) |
 | `kickdesk config validate` | Paths, ports, workflows, required commands |
@@ -102,7 +89,7 @@ Exit `0` for `ok` and `pending:N`; non-zero on unexpected failure (kickdesk show
 | Hub | `1`–`3` select app, `r` refresh, `q` quit |
 | App selected | `Space` next step, `Enter` all remaining, `1`–`N` run one step, `b`/`Esc` back, `c` catalog, `r` refresh, `q` quit |
 
-After each step, **any key** continues. After a full procedure, **Space** returns to the menu. Without `-t`, blocking commands (`up`, dev servers) open in a new GUI terminal when possible (`KICKDESK_TERMINAL` or auto-detect). With `-t N`, they run in the named tmux pane (`kickdesk-publicweb`, etc.). The `migrate` workflow step is omitted when **MIGRATE** is `ok` or `n/a`.
+After each step, **any key** continues. After a full procedure, **any key** returns to the menu. Without a tmux profile, blocking commands (`up`, dev servers) open in a new GUI terminal when possible (`KICKDESK_TERMINAL` or auto-detect). With `-c` + `tmux.enabled`, they run in the named tmux pane (`kickdesk-publicweb`, etc.). The `migrate` workflow step is omitted when **MIGRATE** is `ok` or `n/a`. Selected app row is highlighted in the hub table.
 
 Config adds `app_order`, `primary_port`, and per-app `workflows.start` / `workflows.stop` (ordered command keys).
 

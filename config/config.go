@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,19 +14,28 @@ var defaultAppOrder = []string{"publicweb", "kickagent", "merch-api"}
 
 // Config is the top-level kickdesk registry.
 type Config struct {
-	AppOrder []string          `json:"app_order"`
-	Apps     map[string]App    `json:"apps"`
+	DefaultProfile string         `json:"default_profile"`
+	AppOrder       []string       `json:"app_order"`
+	Apps           map[string]App `json:"apps"`
 }
 
-// App describes one managed repository.
+// App describes one managed repository (inline legacy or merged from manifest).
 type App struct {
 	Path        string            `json:"path"`
+	Label       string            `json:"label"`
+	Manifest    string            `json:"manifest"`
 	PortFamily  int               `json:"port_family"`
 	PrimaryPort int               `json:"primary_port"`
 	Ports       PortsList         `json:"ports"`
 	URL         string            `json:"url"`
 	Workflows   Workflows         `json:"workflows"`
 	Commands    map[string]string `json:"commands"`
+	Status      AppStatusOpts     `json:"status"`
+}
+
+// AppStatusOpts holds optional status sources (manifest status.*).
+type AppStatusOpts struct {
+	Migrate string `json:"migrate"`
 }
 
 // Workflows lists ordered command keys for startup and shutdown.
@@ -131,8 +139,11 @@ func (c *Config) CommandsList(appName string) ([]CommandEntry, error) {
 	return out, nil
 }
 
-// DefaultPath returns ~/.config/kickdesk/config.json.
+// DefaultPath returns ~/.config/kickdesk/config.json (or KICKDESK_CONFIG).
 func DefaultPath() (string, error) {
+	if p := os.Getenv("KICKDESK_CONFIG"); p != "" {
+		return ExpandPath(p)
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
@@ -155,20 +166,10 @@ func ExpandPath(p string) (string, error) {
 	return p, nil
 }
 
-// Load reads and parses a config file.
+// Load reads config.json and resolves app manifests.
 func Load(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("read config %s: %w", path, err)
-	}
-	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parse config %s: %w", path, err)
-	}
-	if len(cfg.Apps) == 0 {
-		return nil, fmt.Errorf("config %s: no apps defined", path)
-	}
-	return &cfg, nil
+	cfg, _, err := LoadRegistry(path)
+	return cfg, err
 }
 
 // AppNames returns sorted app keys.

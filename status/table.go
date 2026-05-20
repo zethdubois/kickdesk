@@ -84,8 +84,12 @@ func buildStatusRows(apps []AppStatus, hub bool) []tableRow {
 		if migrate == "" {
 			migrate = "n/a"
 		}
+		display := a.Label
+		if display == "" {
+			display = a.Name
+		}
 		addRow := func(first bool, p PortLine) {
-			rows = append(rows, tableRow{cells: statusRowCells(hub, first, num, fam, a.Name, migrate, git, url, p)})
+			rows = append(rows, tableRow{cells: statusRowCells(hub, first, num, fam, display, migrate, git, url, p)})
 		}
 
 		if len(a.Ports) == 0 {
@@ -99,7 +103,7 @@ func buildStatusRows(apps []AppStatus, hub bool) []tableRow {
 	return rows
 }
 
-func statusRowCells(hub, first bool, num, fam, app, migrate, git, url string, p PortLine) []tableCell {
+func statusRowCells(hub, first bool, num, fam, display, migrate, git, url string, p PortLine) []tableCell {
 	var cells []tableCell
 	if hub {
 		key := ""
@@ -110,7 +114,7 @@ func statusRowCells(hub, first bool, num, fam, app, migrate, git, url string, p 
 	}
 	f, n, m, g, u := "", "", "", "", ""
 	if first {
-		f, n, m, g, u = fam, app, migrate, git, url
+		f, n, m, g, u = fam, display, migrate, git, url
 	}
 	role, portStr, state := "—", "—", "—"
 	if p.Port > 0 || p.Role != "" {
@@ -224,7 +228,7 @@ func renderTable(apps []AppStatus, hub bool, focusApp string) {
 					line[i] = raw
 				}
 			}
-			focused := focusApp != "" && a.Name == focusApp
+			focused := focusApp != "" && (a.Name == focusApp || a.Label == focusApp)
 			printTableLine(cols, line, st, "│", focused)
 			if pi == portCount-1 && ai < len(apps)-1 {
 				hr("├", "┼", "┤", "─")

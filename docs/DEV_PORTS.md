@@ -1,6 +1,6 @@
 # KAM dev port families
 
-Canonical local port map for Kick Asset Management repos on one machine. **kickdesk** reads [examples/config.json](../examples/config.json); each app repo should match the same numbers in compose, `.env.example`, and framework config.
+Canonical local port map for Kick Asset Management repos on one machine. Each **app manifest** should use the matching family; see [MANIFEST.md](MANIFEST.md) and [examples/manifest.sample.json](../examples/manifest.sample.json). Operator registry: [examples/config.json](../examples/config.json).
 
 ## Glance rule
 
@@ -76,4 +76,4 @@ Update your local `.env` if it still points at old ports (5433 or 5432).
 
 ## Adding a new repo
 
-Pick an unused decade (e.g. **52xx**, **81xx**), document it here and in `examples/config.json`, and use `+0` / `+1` / `+43` for app / gateway / Postgres.
+Pick an unused decade (e.g. **52xx**, **81xx**), document it here and in the app's published manifest, and use `+0` / `+1` / `+43` for app / gateway / Postgres.

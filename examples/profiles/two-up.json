@@ -1,0 +1,11 @@
+{
+  "app_order": ["publicweb", "kickagent"],
+  "labels": {
+    "publicweb": "Public Web"
+  },
+  "tmux": {
+    "enabled": true,
+    "top": 2,
+    "session": "kickdesk"
+  }
+}

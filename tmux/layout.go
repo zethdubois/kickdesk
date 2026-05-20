@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	envChild = "KICKDESK_TMUX_CHILD"
-	envTop   = "KICKDESK_TMUX_TOP"
-	session  = "kickdesk"
+	envChild    = "KICKDESK_TMUX_CHILD"
+	envTop      = "KICKDESK_TMUX_TOP"
+	envProfile  = "KICKDESK_PROFILE"
+	defaultSess = "kickdesk"
 )
 
 // InChild reports whether this process is the menu pane inside a dashboard layout.
@@ -27,16 +28,31 @@ func TopN() int {
 	return n
 }
 
+// BootstrapOpts configures tmux dashboard bootstrap.
+type BootstrapOpts struct {
+	AppNames    []string
+	TopN        int
+	Session     string
+	ProfileName string
+}
+
 // Bootstrap builds the N+1 pane layout and attaches (or re-layouts the current window).
-func Bootstrap(appNames []string, topN int) error {
+func Bootstrap(opts BootstrapOpts) error {
+	topN := opts.TopN
+	appNames := opts.AppNames
 	if topN < 1 || topN > 9 {
 		return fmt.Errorf("tmux top row must be 1-9, got %d", topN)
 	}
 	if topN > len(appNames) {
-		return fmt.Errorf("-t %d requires at least %d apps in app_order", topN, len(appNames))
+		return fmt.Errorf("tmux.top %d requires at least %d apps in app_order", topN, len(appNames))
 	}
 	if _, err := exec.LookPath("tmux"); err != nil {
-		return fmt.Errorf("tmux not found on PATH: install tmux or run kickdesk without -t")
+		return fmt.Errorf("tmux not found on PATH: install tmux or use a profile without tmux")
+	}
+
+	sess := opts.Session
+	if sess == "" {
+		sess = defaultSess
 	}
 
 	bin, err := os.Executable()
@@ -51,36 +67,36 @@ func Bootstrap(appNames []string, topN int) error {
 		if !ConfirmStartTmux() {
 			return fmt.Errorf("cancelled")
 		}
-		return bootstrapNewSession(apps, topN, bin)
+		return bootstrapNewSession(apps, topN, bin, sess, opts.ProfileName)
 	}
-	return bootstrapRelayout(apps, topN, bin)
+	return bootstrapRelayout(apps, topN, bin, sess, opts.ProfileName)
 }
 
-func bootstrapNewSession(apps []string, topN int, bin string) error {
-	_ = run("kill-session", "-t", session)
+func bootstrapNewSession(apps []string, topN int, bin, sess, profileName string) error {
+	_ = run("kill-session", "-t", sess)
 
 	w, h := termSize()
-	if err := run("new-session", "-d", "-s", session, "-n", "main",
+	if err := run("new-session", "-d", "-s", sess, "-n", "main",
 		"-x", strconv.Itoa(w), "-y", strconv.Itoa(h)); err != nil {
 		return err
 	}
-	target := session + ":0"
+	target := sess + ":0"
 	layout, err := applyLayout(target, apps)
 	if err != nil {
 		return err
 	}
-	menuCmd := buildChildMenuCmd(topN, bin, layout)
+	menuCmd := buildChildMenuCmd(topN, bin, profileName, layout)
 	if err := run("send-keys", "-t", layout.menuID, menuCmd, "C-m"); err != nil {
 		return err
 	}
-	cmd := exec.Command("tmux", "attach", "-t", session)
+	cmd := exec.Command("tmux", "attach", "-t", sess)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
-func bootstrapRelayout(apps []string, topN int, bin string) error {
+func bootstrapRelayout(apps []string, topN int, bin, sess, profileName string) error {
 	win, err := currentWindow()
 	if err != nil {
 		return err
@@ -110,7 +126,7 @@ func bootstrapRelayout(apps []string, topN int, bin string) error {
 	if err != nil {
 		return err
 	}
-	menuCmd := buildChildMenuCmd(topN, bin, layout)
+	menuCmd := buildChildMenuCmd(topN, bin, profileName, layout)
 	if err := run("send-keys", "-t", layout.menuID, menuCmd, "C-m"); err != nil {
 		return err
 	}

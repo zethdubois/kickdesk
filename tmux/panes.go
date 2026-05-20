@@ -104,15 +104,22 @@ func serverPanesInCurrentWindow() (map[string]string, error) {
 	return servers, nil
 }
 
-func buildChildMenuCmd(topN int, bin string, layout layoutResult) string {
+func buildChildMenuCmd(topN int, bin, profileName string, layout layoutResult) string {
 	var parts []string
 	parts = append(parts, fmt.Sprintf("%s=1", envChild))
 	parts = append(parts, fmt.Sprintf("%s=%d", envTop, topN))
+	if profileName != "" {
+		parts = append(parts, fmt.Sprintf("%s=%s", envProfile, profileName))
+	}
 	for app, id := range layout.apps {
 		parts = append(parts, fmt.Sprintf("%s=%s", PaneEnvKey(app), id))
 	}
 	parts = append(parts, fmt.Sprintf("%s=%s", PaneEnvKey("menu"), layout.menuID))
-	parts = append(parts, shellQuote(bin), "menu")
+	parts = append(parts, shellQuote(bin))
+	if profileName != "" {
+		parts = append(parts, fmt.Sprintf("%s=%s", envProfile, profileName))
+	}
+	parts = append(parts, "menu")
 	return strings.Join(parts, " ")
 }
 

@@ -2,6 +2,7 @@ package status
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -21,15 +22,45 @@ func dbPort(app config.App) int {
 }
 
 func collectMigrate(app config.App, dir string) string {
-	shell, ok := app.Commands[migrateStatusKey]
-	if !ok {
-		return "n/a"
-	}
 	port := dbPort(app)
 	if port <= 0 || !IsPortOpen(port) {
 		return "unavailable"
 	}
+
+	if app.Status.Migrate != "" {
+		if st := readMigrateStatusFile(app.Status.Migrate); st != "" {
+			return st
+		}
+	}
+
+	shell, ok := app.Commands[migrateStatusKey]
+	if !ok {
+		return "n/a"
+	}
 	return runMigrateStatus(dir, shell)
+}
+
+func readMigrateStatusFile(path string) string {
+	expanded, err := config.ExpandPath(path)
+	if err != nil {
+		return ""
+	}
+	data, err := os.ReadFile(expanded)
+	if err != nil {
+		return ""
+	}
+	line := strings.TrimSpace(string(data))
+	if i := strings.IndexByte(line, '\n'); i >= 0 {
+		line = line[:i]
+	}
+	switch {
+	case line == "ok", line == "unavailable":
+		return line
+	case strings.HasPrefix(line, "pending:"):
+		return line
+	default:
+		return ""
+	}
 }
 
 func runMigrateStatus(dir, shell string) string {

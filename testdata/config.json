@@ -1,0 +1,17 @@
+{
+  "apps": {
+    "publicweb": {
+      "path": "~/projects/publicweb",
+      "label": "Public Web",
+      "manifest": "testdata/manifests/publicweb.json"
+    },
+    "kickagent": {
+      "path": "~/projects/kickagent",
+      "manifest": "testdata/manifests/kickagent.json"
+    },
+    "merch-api": {
+      "path": "~/projects/merch-api",
+      "manifest": "testdata/manifests/merch-api.json"
+    }
+  }
+}

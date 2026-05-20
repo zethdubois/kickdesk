@@ -1,0 +1,29 @@
+{
+  "id": "merch-api",
+  "port_family": 80,
+  "primary_port": 8000,
+  "ports": [
+    { "role": "api", "port": 8000 },
+    { "role": "gateway", "port": 8001 },
+    { "role": "db", "port": 8043 }
+  ],
+  "url": "http://localhost:8000/docs",
+  "workflows": {
+    "start": ["db", "migrate", "up"],
+    "stop": ["stop-api", "stop-gateway", "down"]
+  },
+  "commands": {
+    "up": "make local-api-run",
+    "down": "make local-db-down",
+    "build": "make setup",
+    "health": "make local-health",
+    "ready": "make local-ready",
+    "db": "make local-db-up",
+    "db-reset": "make local-db-reset",
+    "migrate": "make local-migrate",
+    "migrate-status": "make local-migrate-status",
+    "gateway": "make local-gateway-run",
+    "stop-api": "fuser -k 8000/tcp 2>/dev/null || true",
+    "stop-gateway": "fuser -k 8001/tcp 2>/dev/null || true"
+  }
+}

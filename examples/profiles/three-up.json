@@ -1,0 +1,12 @@
+{
+  "app_order": ["publicweb", "kickagent", "merch-api"],
+  "labels": {
+    "publicweb": "PW",
+    "kickagent": "KA"
+  },
+  "tmux": {
+    "enabled": true,
+    "top": 2,
+    "session": "kickdesk"
+  }
+}

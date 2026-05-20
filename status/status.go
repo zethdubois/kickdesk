@@ -29,7 +29,8 @@ func (p PortLine) String() string {
 
 // AppStatus is the status snapshot for one app.
 type AppStatus struct {
-	Name       string
+	Name       string // registry id (menu hotkeys)
+	Label      string // display name in table when set
 	PortFamily string
 	Ports      []PortLine
 	Migrate    string
@@ -135,6 +136,7 @@ func collectApp(name string, app config.App) (AppStatus, error) {
 	branch, dirty := gitInfo(path)
 	return AppStatus{
 		Name:       name,
+		Label:      app.DisplayName(name),
 		PortFamily: config.FamilyLabel(app.PortFamily),
 		Ports:      portLines(app.Ports),
 		Migrate:    collectMigrate(app, path),

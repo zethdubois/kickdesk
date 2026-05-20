@@ -1,0 +1,6 @@
+{
+  "app_order": ["publicweb", "kickagent", "merch-api"],
+  "tmux": {
+    "enabled": false
+  }
+}

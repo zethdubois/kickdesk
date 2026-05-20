@@ -1,0 +1,26 @@
+{
+  "id": "my-app",
+  "port_family": 50,
+  "primary_port": 5000,
+  "ports": [
+    { "role": "app", "port": 5000 },
+    { "role": "db", "port": 5043 }
+  ],
+  "url": "http://localhost:5000",
+  "workflows": {
+    "start": ["db-up", "migrate", "up"],
+    "stop": ["stop-server", "db-down"]
+  },
+  "commands": {
+    "up": "pnpm dev",
+    "down": "pnpm db:down",
+    "build": "pnpm build",
+    "db-up": "pnpm db:up",
+    "migrate": "pnpm db:migrate",
+    "migrate-status": "pnpm db:migrate:status",
+    "stop-server": "echo stop app"
+  },
+  "status": {
+    "migrate": "~/.config/my-app/migrate-status"
+  }
+}

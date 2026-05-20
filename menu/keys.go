@@ -4,61 +4,108 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
+	"time"
 
 	"golang.org/x/term"
 )
 
-// readKey reads a single key from the terminal (no Enter required).
-// Ctrl+C and Ctrl+D quit (restores terminal). Falls back to line input when not a TTY.
+// readKey reads one key (TTY: raw, no Enter; otherwise: line with prompt on stderr).
 func readKey(reader *bufio.Reader) (byte, error) {
-	fd := int(os.Stdin.Fd())
-	if !term.IsTerminal(fd) {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			return 0, err
-		}
-		line = strings.TrimSpace(line)
-		if line == "" {
-			return '\r', nil
-		}
-		if strings.EqualFold(line, "q") {
-			return 0, errQuit
-		}
-		return line[0], nil
+	tty, err := inputTTY()
+	if err != nil || !term.IsTerminal(int(tty.Fd())) {
+		return readKeyLine(reader, "choice: ")
 	}
+	fd := int(tty.Fd())
+	var key byte
+	err = withRawTerminalOn(fd, tty, func(r io.Reader) error {
+		var err error
+		key, err = readKeyRaw(fd, r)
+		return err
+	})
+	return key, err
+}
 
+func readKeyLine(reader *bufio.Reader, prompt string) (byte, error) {
+	fmt.Fprint(os.Stderr, prompt)
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		return 0, err
+	}
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return '\r', nil
+	}
+	if strings.EqualFold(line, "q") {
+		return 0, errQuit
+	}
+	return line[0], nil
+}
+
+func withRawTerminalOn(fd int, tty *os.File, fn func(io.Reader) error) error {
+	if !term.IsTerminal(fd) {
+		return fn(tty)
+	}
 	old, err := term.MakeRaw(fd)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	defer func() { _ = term.Restore(fd, old) }()
+	return fn(tty)
+}
 
-	buf := make([]byte, 1)
-	n, err := os.Stdin.Read(buf)
+// readKeyRaw reads one key from r; fd is used only to drain escape sequences.
+func readKeyRaw(fd int, r io.Reader) (byte, error) {
+	key, err := readKeyFromFD(fd, r)
 	if err != nil {
 		return 0, err
 	}
-	if n == 0 {
-		return 0, nil
-	}
-	switch buf[0] {
-	case 3, 4: // Ctrl+C, Ctrl+D
+	switch key {
+	case 3, 4:
 		return 0, errQuit
-	case 27: // Esc
+	case 27:
+		drainReader(fd, r, 50*time.Millisecond)
 		return 27, nil
 	}
-	return buf[0], nil
+	return key, nil
+}
+
+func drainReader(fd int, r io.Reader, wait time.Duration) {
+	if f, ok := r.(*os.File); ok {
+		_ = f.SetReadDeadline(time.Now().Add(wait))
+		buf := make([]byte, 16)
+		for {
+			n, err := r.Read(buf)
+			if err != nil || n == 0 {
+				break
+			}
+		}
+		_ = f.SetReadDeadline(time.Time{})
+		return
+	}
+	_ = fd
+}
+
+func flushScreen() {
+	_ = os.Stdout.Sync()
+	_ = os.Stderr.Sync()
 }
 
 // waitFor pauses until accept returns true for a key (nil accept = any key except q).
 func waitFor(reader *bufio.Reader, prompt string, accept func(byte) bool) error {
-	fmt.Print(prompt)
-	fd := int(os.Stdin.Fd())
-	if term.IsTerminal(fd) {
+	fmt.Fprint(os.Stderr, prompt)
+	flushScreen()
+	tty, err := inputTTY()
+	if err != nil || !term.IsTerminal(int(tty.Fd())) {
+		_, err := reader.ReadString('\n')
+		return err
+	}
+	fd := int(tty.Fd())
+	return withRawTerminalOn(fd, tty, func(r io.Reader) error {
 		for {
-			k, err := readKey(reader)
+			k, err := readKeyRaw(fd, r)
 			if errors.Is(err, errQuit) {
 				return errQuit
 			}
@@ -72,17 +119,15 @@ func waitFor(reader *bufio.Reader, prompt string, accept func(byte) bool) error 
 				return nil
 			}
 		}
-	}
-	_, err := reader.ReadString('\n')
-	return err
+	})
 }
 
 // waitAnyKeyOrQuit pauses so command output can be read; any key continues, q quits.
 func waitAnyKeyOrQuit(reader *bufio.Reader) error {
-	return waitFor(reader, "\nPress any key to continue (q quit)...", nil)
+	return waitFor(reader, "Press any key (q quit)... ", nil)
 }
 
 // waitReturnToMenu pauses after a full procedure before refreshing the menu.
 func waitReturnToMenu(reader *bufio.Reader) error {
-	return waitFor(reader, "\nPress any key to return to menu (q quit)...", nil)
+	return waitFor(reader, "Press any key to return to menu (q quit)... ", nil)
 }
