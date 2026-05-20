@@ -53,27 +53,36 @@ func showMenu(cfg *config.Config, version string, reader *bufio.Reader, state *m
 	var running bool
 
 	if state.selected != "" {
-		running = status.AppRunning(cfg, state.selected)
-		if running {
-			procedure = "Shutdown"
+		if err := cfg.AppErrors[state.selected]; err != nil {
+			fmt.Printf("\n%s — not available\n", state.selected)
+			fmt.Println(strings.Repeat("─", 56))
+			fmt.Printf("  %v\n", err)
+			fmt.Println(strings.Repeat("─", 56))
+			fmt.Println("  Fix: publish manifest to ~/.config/<app-id>/manifest.json (see docs/MANIFEST.md)")
+			fmt.Println(strings.Repeat("─", 56))
 		} else {
-			procedure = "Startup"
-		}
-		migrateSt := migrateStatusForApp(apps, state.selected)
-		keys, err = EffectiveWorkflowKeys(cfg, state.selected, running, migrateSt)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
-				return errQuit
+			running = status.AppRunning(cfg, state.selected)
+			if running {
+				procedure = "Shutdown"
+			} else {
+				procedure = "Startup"
 			}
-			state.selected = ""
-			state.completed = 0
-			return nil
+			migrateSt := migrateStatusForApp(apps, state.selected)
+			keys, err = EffectiveWorkflowKeys(cfg, state.selected, running, migrateSt)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error: %v\n", err)
+				if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
+					return errQuit
+				}
+				state.selected = ""
+				state.completed = 0
+				return nil
+			}
+			if state.completed > len(keys) {
+				state.completed = len(keys)
+			}
+			printWorkflow(cfg, state.selected, procedure, keys, state.completed)
 		}
-		if state.completed > len(keys) {
-			state.completed = len(keys)
-		}
-		printWorkflow(cfg, state.selected, procedure, keys, state.completed)
 	}
 
 	printFooter(state.selected != "", len(appNames), len(keys), tmuxTopHint(cfg))

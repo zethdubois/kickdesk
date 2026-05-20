@@ -39,6 +39,7 @@ type AppStatus struct {
 	URL        string
 	Running    bool
 	MainPort   int
+	LoadError  string // non-empty when manifest/config failed to load
 }
 
 // Row is a legacy aggregate for callers that still expect a single port string.
@@ -53,21 +54,42 @@ type Row struct {
 	MainPort   int
 }
 
-// Collect builds status for every app in app_order.
+// Collect builds status for every app in app_order (including load failures).
 func Collect(cfg *config.Config) ([]AppStatus, error) {
 	var out []AppStatus
 	for _, name := range cfg.OrderedAppNames() {
+		if err := cfg.AppErrors[name]; err != nil {
+			out = append(out, loadErrorStatus(name, cfg, err))
+			continue
+		}
 		app, ok := cfg.Apps[name]
 		if !ok {
+			out = append(out, loadErrorStatus(name, cfg, fmt.Errorf("not in registry")))
 			continue
 		}
 		st, err := collectApp(name, app)
 		if err != nil {
-			return nil, err
+			out = append(out, loadErrorStatus(name, cfg, err))
+			continue
 		}
 		out = append(out, st)
 	}
 	return out, nil
+}
+
+func loadErrorStatus(name string, cfg *config.Config, err error) AppStatus {
+	label := name
+	if l := cfg.DisplayLabels[name]; l != "" {
+		label = l
+	} else if app, ok := cfg.Apps[name]; ok && app.Label != "" {
+		label = app.Label
+	}
+	return AppStatus{
+		Name:      name,
+		Label:     label,
+		Migrate:   "error",
+		LoadError: err.Error(),
+	}
 }
 
 // CollectRows converts AppStatus to legacy Row slice (for compatibility).

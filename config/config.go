@@ -17,6 +17,10 @@ type Config struct {
 	DefaultProfile string         `json:"default_profile"`
 	AppOrder       []string       `json:"app_order"`
 	Apps           map[string]App `json:"apps"`
+	// AppErrors holds per-app manifest load failures (app still listed in app_order).
+	AppErrors map[string]error `json:"-"`
+	// DisplayLabels are profile display names keyed by app id (including unloadable apps).
+	DisplayLabels map[string]string `json:"-"`
 }
 
 // App describes one managed repository (inline legacy or merged from manifest).

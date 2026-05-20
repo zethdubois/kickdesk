@@ -148,12 +148,23 @@ func ApplyProfile(cfg *Config, prof *Profile) *Config {
 	out := &Config{
 		DefaultProfile: cfg.DefaultProfile,
 		Apps:           make(map[string]App, len(prof.AppOrder)),
+		AppErrors:      make(map[string]error),
+		DisplayLabels:  make(map[string]string),
+	}
+	if len(prof.Labels) > 0 {
+		for k, v := range prof.Labels {
+			out.DisplayLabels[k] = v
+		}
 	}
 	order := prof.AppOrder
 	if len(order) == 0 {
 		order = cfg.OrderedAppNames()
 	}
 	for _, name := range order {
+		if err := cfg.AppErrors[name]; err != nil {
+			out.AppErrors[name] = err
+			continue
+		}
 		app, ok := cfg.Apps[name]
 		if !ok {
 			continue

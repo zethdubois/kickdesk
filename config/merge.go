@@ -30,11 +30,13 @@ func LoadRegistry(path string) (*Config, map[string]string, error) {
 
 	manifestPaths := make(map[string]string)
 	apps := make(map[string]App, len(raw.Apps))
+	appErrors := make(map[string]error)
 
 	for name, entry := range raw.Apps {
 		app, mpath, err := parseAppEntry(name, entry)
 		if err != nil {
-			return nil, nil, fmt.Errorf("app %q: %w", name, err)
+			appErrors[name] = err
+			continue
 		}
 		apps[name] = app
 		if mpath != "" {
@@ -46,6 +48,7 @@ func LoadRegistry(path string) (*Config, map[string]string, error) {
 		DefaultProfile: raw.DefaultProfile,
 		AppOrder:       raw.AppOrder,
 		Apps:           apps,
+		AppErrors:      appErrors,
 	}
 	return cfg, manifestPaths, nil
 }

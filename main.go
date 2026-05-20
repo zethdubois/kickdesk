@@ -187,11 +187,15 @@ func runMenu(opts cliOpts) {
 
 func printManifestHint(rt *config.Runtime) {
 	for _, name := range rt.Config.OrderedAppNames() {
+		if err := rt.Config.AppErrors[name]; err != nil {
+			fmt.Fprintf(os.Stderr, "app %s: %v\n", name, err)
+			continue
+		}
 		if p := rt.ManifestPaths[name]; p != "" {
 			fmt.Fprintf(os.Stderr, "manifest %s ← %s\n", name, p)
 		}
 	}
-	if len(rt.ManifestPaths) > 0 {
+	if len(rt.ManifestPaths) > 0 || len(rt.Config.AppErrors) > 0 {
 		fmt.Fprintln(os.Stderr)
 	}
 }

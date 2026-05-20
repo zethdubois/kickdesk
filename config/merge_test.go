@@ -94,6 +94,45 @@ func TestResolveFromManifest_pathFromManifest(t *testing.T) {
 	}
 }
 
+func TestLoadRegistry_partialFailure(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.json")
+	manifestPath := filepath.Join(dir, "ok.json")
+	writeManifest(t, manifestPath, `{
+		"id": "good-app",
+		"path": "`+dir+`",
+		"ports": [{"role": "app", "port": 5000}],
+		"commands": {"up": "true", "down": "true", "build": "true"},
+		"workflows": {"start": ["up"], "stop": ["down"]}
+	}`)
+	cfgJSON := `{
+		"apps": {
+			"good-app": {"manifest": "` + manifestPath + `"},
+			"bad-app": {}
+		}
+	}`
+	if err := os.WriteFile(cfgPath, []byte(cfgJSON), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, paths, err := LoadRegistry(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := cfg.Apps["good-app"]; !ok {
+		t.Fatal("expected good-app loaded")
+	}
+	if _, ok := cfg.Apps["bad-app"]; ok {
+		t.Fatal("bad-app should not be in Apps")
+	}
+	if cfg.AppErrors["bad-app"] == nil {
+		t.Fatal("expected AppErrors for bad-app")
+	}
+	if paths["good-app"] != manifestPath {
+		t.Fatalf("manifest path = %q", paths["good-app"])
+	}
+}
+
 func writeManifest(t *testing.T, path, body string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {

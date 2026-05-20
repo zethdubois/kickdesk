@@ -115,11 +115,7 @@ func buildChildMenuCmd(topN int, bin, profileName string, layout layoutResult) s
 		parts = append(parts, fmt.Sprintf("%s=%s", PaneEnvKey(app), id))
 	}
 	parts = append(parts, fmt.Sprintf("%s=%s", PaneEnvKey("menu"), layout.menuID))
-	parts = append(parts, shellQuote(bin))
-	if profileName != "" {
-		parts = append(parts, fmt.Sprintf("%s=%s", envProfile, profileName))
-	}
-	parts = append(parts, "menu")
+	parts = append(parts, shellQuote(bin), "menu")
 	return strings.Join(parts, " ")
 }
 

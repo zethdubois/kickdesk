@@ -88,6 +88,10 @@ func buildStatusRows(apps []AppStatus, hub bool) []tableRow {
 		if display == "" {
 			display = a.Name
 		}
+		if a.LoadError != "" {
+			rows = append(rows, tableRow{cells: loadErrorRowCells(hub, num, display, a.LoadError)})
+			continue
+		}
 		addRow := func(first bool, p PortLine) {
 			rows = append(rows, tableRow{cells: statusRowCells(hub, first, num, fam, display, migrate, git, url, p)})
 		}
@@ -101,6 +105,28 @@ func buildStatusRows(apps []AppStatus, hub bool) []tableRow {
 		}
 	}
 	return rows
+}
+
+func loadErrorRowCells(hub bool, num, display, loadErr string) []tableCell {
+	msg := loadErr
+	if len(msg) > 48 {
+		msg = msg[:45] + "..."
+	}
+	var cells []tableCell
+	if hub {
+		cells = append(cells, tableCell{text: num})
+	}
+	cells = append(cells,
+		tableCell{text: "—"},
+		tableCell{text: display},
+		tableCell{text: msg},
+		tableCell{text: "—"},
+		tableCell{text: "error"},
+		tableCell{text: "error"},
+		tableCell{text: "—"},
+		tableCell{text: "—"},
+	)
+	return cells
 }
 
 func statusRowCells(hub, first bool, num, fam, display, migrate, git, url string, p PortLine) []tableCell {
