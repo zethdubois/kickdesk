@@ -1,8 +1,8 @@
 {
-  "app_order": ["publicweb", "kickagent", "merch-api"],
+  "app_order": ["fixture-web", "fixture-agent", "fixture-api"],
   "labels": {
-    "publicweb": "PW",
-    "kickagent": "KA"
+    "fixture-web": "Web",
+    "fixture-agent": "Agent"
   },
   "tmux": {
     "enabled": true,

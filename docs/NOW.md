@@ -4,7 +4,7 @@ Everything in this doc is in scope for the first usable version. If it's not her
 
 ## Goal
 
-One CLI cockpit for **three apps** during active development:
+One CLI cockpit for **multiple apps** during active development:
 
 - **Status** — running or not, ports, localhost URLs, git branch/dirty
 - **Build** — same verb everywhere, even if the underlying command differs
@@ -23,36 +23,38 @@ One CLI cockpit for **three apps** during active development:
 
 ## App registry
 
-| App | Family | Ports (role) | URL |
-|-----|--------|--------------|-----|
-| `publicweb` | 50xx | app 5000, db 5043 | http://localhost:5000 |
-| `kickagent` | 70xx | publish 7099 (PW contract), standalone 7098 (KA dev only) | http://127.0.0.1:7099/manifest.json |
-| `merch-api` | 80xx | api 8000, gateway 8001, db 8043 | http://localhost:8000/docs |
+Kickdesk is app-agnostic. Each app publishes its own ports and commands; the operator registry only lists **app ids** (and optional labels).
 
-See [DEV_PORTS.md](DEV_PORTS.md) for the org port matrix. Kickagent port semantics: `kickagent/docs/ports.md` in that repo.
+| Port decade | Typical role        | Example offsets                          |
+| ----------- | ------------------- | ---------------------------------------- |
+| **50xx**    | Web app (Vite/Kit)  | app +0, Postgres host +43                |
+| **70xx**    | Agent / tooling HTTP| publish +99, standalone +98 (if used)    |
+| **80xx**    | API stack           | API +0, gateway +1, Postgres host +43    |
+
+Org-specific port tables (if you use them): [DEV_PORTS.md](DEV_PORTS.md) — optional reference, not part of the Kickdesk subscriber contract.
 
 Optional later in config: `depends_on` so `up --all` starts in order.
 
-## Configuration (v0.5 modular)
+## Configuration (v0.6 modular)
 
-**Cockpit:** `~/.config/kickdesk/config.json` — which repos, optional labels, `default_profile`.
+**Cockpit:** `~/.config/kickdesk/config.json` — app ids and optional labels only (`default_profile` optional).
 
-**Per-app manifest:** ports, workflows, commands — see [MANIFEST.md](MANIFEST.md). Discovery: `~/.config/<id>/manifest.json`, repo `.kickdesk.json`, or explicit `manifest` path in registry.
+**Per-app manifest:** published to `~/.config/<id>/manifest.json` — includes **`path`** (checkout), ports, workflows, commands. See [MANIFEST.md](MANIFEST.md). Kickdesk does **not** load repo `.kickdesk.json`; missing publish fails with a clear error.
 
-**Profiles:** `~/.config/kickdesk/<name>.json` — `app_order`, labels, tmux layout (`config.json` is only the registry). **`last.cnfg`** stores the last profile chosen. `kickdesk` loads `last.cnfg`; `kickdesk -c` opens the picker.
+**Profiles:** `~/.config/kickdesk/<name>.json` — `app_order`, labels, tmux layout. **`last.cnfg`** stores the last profile. `kickdesk` loads `last.cnfg`; `kickdesk -c` opens the picker.
 
 **Legacy:** monolithic `config.json` with full `apps.<id>` inline still works ([examples/config.legacy.json](../examples/config.legacy.json)).
 
 **Setup:**
 
 ```bash
-mkdir -p ~/.config/kickdesk/profiles
 cp examples/config.json ~/.config/kickdesk/config.json
 cp examples/profiles/two-up.json ~/.config/kickdesk/two-up.json
+# Each app: publish manifest to ~/.config/<app-id>/manifest.json (includes path)
 kickdesk config validate
 ```
 
-Thin registry: [examples/config.json](../examples/config.json). Manifest schema sample: [examples/manifest.sample.json](../examples/manifest.sample.json) (app repos publish real manifests).
+Examples: [examples/config.json](../examples/config.json), [examples/manifest.sample.json](../examples/manifest.sample.json). Profile examples use `fixture-*` app ids; replace with your registry ids.
 
 ## Migrate status
 
@@ -80,7 +82,7 @@ Exit `0` for `ok` and `pending:N`; non-zero on unexpected failure (kickdesk show
 | `kickdesk -t N` | **Deprecated** — use `-c` profile with `tmux.top`; still works with a warning |
 | `kickdesk status` | Table: app, ports, migrate pending?, git branch, dirty?, URL |
 | `kickdesk run <app> <key>` | Run `commands.<key>` in app repo (non-interactive) |
-| `kickdesk config validate` | Paths, ports, workflows, required commands |
+| `kickdesk config validate` | Paths, ports, workflows, required commands, manifest paths |
 
 **Menu keys (no Enter required):**
 
@@ -89,7 +91,7 @@ Exit `0` for `ok` and `pending:N`; non-zero on unexpected failure (kickdesk show
 | Hub | `1`–`3` select app, `r` refresh, `q` quit |
 | App selected | `Space` next step, `Enter` all remaining, `1`–`N` run one step, `b`/`Esc` back, `c` catalog, `r` refresh, `q` quit |
 
-After each step, **any key** continues. After a full procedure, **any key** returns to the menu. Without a tmux profile, blocking commands (`up`, dev servers) open in a new GUI terminal when possible (`KICKDESK_TERMINAL` or auto-detect). With `-c` + `tmux.enabled`, they run in the named tmux pane (`kickdesk-publicweb`, etc.). The `migrate` workflow step is omitted when **MIGRATE** is `ok` or `n/a`. Selected app row is highlighted in the hub table.
+After each step, **any key** continues. After a full procedure, **any key** returns to the menu. Without a tmux profile, blocking commands (`up`, dev servers) open in a new GUI terminal when possible (`KICKDESK_TERMINAL` or auto-detect). With `-c` + `tmux.enabled`, they run in the named tmux pane (`kickdesk-<app-id>`, etc.). The `migrate` workflow step is omitted when **MIGRATE** is `ok` or `n/a`. Selected app row is highlighted in the hub table.
 
 Config adds `app_order`, `primary_port`, and per-app `workflows.start` / `workflows.stop` (ordered command keys).
 
@@ -111,14 +113,14 @@ Colored terminal output is fine; keep the layout stable so muscle memory works.
 
 ## Implementation notes
 
-- Run shell commands in each app's `path`
+- Run shell commands in each app's manifest `path`
 - Batch `up`/`down`/`build --all` may run concurrently unless `depends_on` is added
 - Clear errors: which app, which command, stderr snippet
 - Fast: no heavy polling; port check + git status should feel instant
 
 ## Definition of done (v0)
 
-- [x] Config file documents three real apps
+- [x] Config file documents apps (registry + published manifests)
 - [x] `status` is the daily driver
 - [ ] `up` / `down` / `build` work per app and with `--all` (via menu/`run` today)
 - [x] `run` works for at least one custom command per app (e.g. `test`)

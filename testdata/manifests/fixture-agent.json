@@ -1,0 +1,22 @@
+{
+  "id": "fixture-agent",
+  "path": "testdata/fixtures/fixture-agent",
+  "port_family": 70,
+  "primary_port": 7099,
+  "ports": [
+    { "role": "publish", "port": 7099 },
+    { "role": "standalone", "port": 7098 }
+  ],
+  "url": "http://127.0.0.1:7099/manifest.json",
+  "workflows": {
+    "start": ["build", "publish", "up"],
+    "stop": ["stop-server"]
+  },
+  "commands": {
+    "up": "true",
+    "down": "true",
+    "build": "true",
+    "publish": "true",
+    "stop-server": "true"
+  }
+}

@@ -1,5 +1,6 @@
 {
   "id": "my-app",
+  "path": "~/projects/my-app",
   "port_family": 50,
   "primary_port": 5000,
   "ports": [

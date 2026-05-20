@@ -6,9 +6,10 @@ import (
 	"os"
 )
 
-// Manifest is the per-app operational config (repo or ~/.config/<id>/).
+// Manifest is the per-app operational config published to ~/.config/<id>/.
 type Manifest struct {
 	ID          string            `json:"id"`
+	Path        string            `json:"path"`
 	PortFamily  int               `json:"port_family"`
 	PrimaryPort int               `json:"primary_port"`
 	Ports       PortsList         `json:"ports"`
@@ -23,9 +24,8 @@ type ManifestStatus struct {
 	Migrate string `json:"migrate"`
 }
 
-// AppRef is the thin registry entry (path + optional manifest override).
+// AppRef is the thin registry entry (optional label + optional manifest override for dev).
 type AppRef struct {
-	Path     string `json:"path"`
 	Label    string `json:"label"`
 	Manifest string `json:"manifest"`
 }
@@ -46,10 +46,10 @@ func LoadManifest(path string) (*Manifest, error) {
 	return &m, nil
 }
 
-// ToApp merges manifest fields into a runtime App with registry path/label.
-func (m *Manifest) ToApp(path, label string) App {
+// ToApp merges manifest fields into a runtime App; path comes from the manifest.
+func (m *Manifest) ToApp(label string) App {
 	return App{
-		Path:        path,
+		Path:        m.Path,
 		Label:       label,
 		PortFamily:  m.PortFamily,
 		PrimaryPort: m.PrimaryPort,

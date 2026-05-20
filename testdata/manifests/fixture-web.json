@@ -1,0 +1,28 @@
+{
+  "id": "fixture-web",
+  "path": "testdata/fixtures/fixture-web",
+  "port_family": 50,
+  "primary_port": 5000,
+  "ports": [
+    { "role": "app", "port": 5000 },
+    { "role": "db", "port": 5043 }
+  ],
+  "url": "http://localhost:5000",
+  "workflows": {
+    "start": ["db-up", "migrate", "up"],
+    "stop": ["stop-server", "db-down"]
+  },
+  "commands": {
+    "up": "true",
+    "down": "true",
+    "build": "true",
+    "db-up": "true",
+    "db-down": "true",
+    "migrate": "true",
+    "migrate-status": "true",
+    "stop-server": "true"
+  },
+  "status": {
+    "migrate": "testdata/fixtures/fixture-web/migrate-status"
+  }
+}

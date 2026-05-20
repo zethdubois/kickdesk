@@ -1,5 +1,5 @@
 {
-  "app_order": ["publicweb", "kickagent", "merch-api"],
+  "app_order": ["fixture-web", "fixture-agent", "fixture-api"],
   "tmux": {
     "enabled": false
   }

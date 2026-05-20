@@ -1,17 +1,14 @@
 {
   "apps": {
-    "publicweb": {
-      "path": "~/projects/publicweb",
-      "label": "Public Web",
-      "manifest": "testdata/manifests/publicweb.json"
+    "fixture-web": {
+      "label": "Fixture Web",
+      "manifest": "testdata/manifests/fixture-web.json"
     },
-    "kickagent": {
-      "path": "~/projects/kickagent",
-      "manifest": "testdata/manifests/kickagent.json"
+    "fixture-agent": {
+      "manifest": "testdata/manifests/fixture-agent.json"
     },
-    "merch-api": {
-      "path": "~/projects/merch-api",
-      "manifest": "testdata/manifests/merch-api.json"
+    "fixture-api": {
+      "manifest": "testdata/manifests/fixture-api.json"
     }
   }
 }

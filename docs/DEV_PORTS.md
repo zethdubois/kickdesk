@@ -1,16 +1,18 @@
 # KAM dev port families
 
-Canonical local port map for Kick Asset Management repos on one machine. Each **app manifest** should use the matching family; see [MANIFEST.md](MANIFEST.md) and [examples/manifest.sample.json](../examples/manifest.sample.json). Operator registry: [examples/config.json](../examples/config.json).
+> **Org-specific (Kick Asset Management).** Not required for Kickdesk subscribers. Port values belong in each app's **published** `~/.config/<app-id>/manifest.json` per [MANIFEST.md](MANIFEST.md). This file is an optional local reference for one organization's repos.
+
+Canonical local port map when multiple KAM-style apps run on one machine.
 
 ## Glance rule
 
-**First two digits = product; last two digits = role.**
+**First two digits = product decade; last two digits = role.**
 
-| Decade | Product | Repo |
-|--------|---------|------|
-| **50xx** | Web app (SvelteKit / Vite) | publicweb |
-| **70xx** | Agent tooling (manifest, standalone) | kickagent |
-| **80xx** | Merch API stack | merch-api |
+| Decade | Product role              |
+| ------ | ------------------------- |
+| **50xx** | Web app (SvelteKit / Vite) |
+| **70xx** | Agent / tooling HTTP       |
+| **80xx** | API stack (API + gateway)  |
 
 | Offset | Role | Examples |
 |--------|------|----------|
@@ -19,61 +21,41 @@ Canonical local port map for Kick Asset Management repos on one machine. Each **
 | `+43` | Postgres on **host** (container still 5432 inside) | 5043, 8043 |
 | `+99` | Tooling HTTP in 70xx (historical) | 7099 publish |
 
-## Allocation
+## Example allocation (this org)
 
-| Family | App | Role | Port | Env / config |
-|--------|-----|------|------|----------------|
-| 50xx | publicweb | HTTP | **5000** | `vite.config.ts` `server.port`, `strictPort: true` |
-| 50xx | publicweb | Postgres | **5043** | `DATABASE_URL_DEV`, `scripts/compose.sh` |
-| 70xx | kickagent | publish (contract server) | **7099** | `KICKAGENT_PUBLISH_PORT`, `KICKAGENT_MANIFEST_URL` — **publicweb Phase 2** |
-| 70xx | kickagent | standalone (dev HTTP) | **7098** | `PORT` in `standalone.ts` — kickagent-only; **do not** point PW here |
-| 80xx | merch-api | FastAPI | **8000** | `API_PORT` |
-| 80xx | merch-api | gateway | **8001** | `PORT` in `gateway/src/server.js` |
-| 80xx | merch-api | Postgres | **8043** | `POSTGRES_PORT`, `DATABASE_URL` |
+| Family | Stack | Role | Port | Typical config source |
+|--------|-------|------|------|------------------------|
+| 50xx | Web | HTTP | **5000** | Vite `server.port` |
+| 50xx | Web | Postgres | **5043** | compose / `DATABASE_URL` |
+| 70xx | Agent | publish (contract server) | **7099** | env `*_PUBLISH_PORT` |
+| 70xx | Agent | standalone (dev HTTP) | **7098** | dev server only |
+| 80xx | API | FastAPI | **8000** | `API_PORT` |
+| 80xx | API | gateway | **8001** | gateway `PORT` |
+| 80xx | API | Postgres | **8043** | `POSTGRES_PORT` |
 
-**Cross-family link:** publicweb loads kickagent from `http://127.0.0.1:7099/manifest.json` — intentional, not a collision.
+**Note:** HTTP `manifest.json` on port 7099 is a **runtime bundle contract** for one web+agent integration — not the same file as Kickdesk's `~/.config/<id>/manifest.json`.
 
-## kickagent (70xx) — two HTTP servers
+## 70xx — two HTTP servers (agent stack)
 
-kickdesk `primary_port` and `url` use **7099** (publish / contract). Status also tracks **7098** (standalone).
+| Port | Role | Typical use |
+|------|------|-------------|
+| **7099** | Publish / contract server | Integration consumers |
+| **7098** | Standalone dev HTTP | Local smoke tests only |
 
-| Port | Role | Start (typical) | Who uses it |
-|------|------|-----------------|-------------|
-| **7099** | Publish server — `manifest.json` + ESM bundle | `pnpm serve-publish` / kickdesk `up` | **publicweb**, Phase 2 integration |
-| **7098** | Standalone dev HTTP — `/hello`, `/health` | `pnpm standalone` | Kickagent dev smoke tests only |
-
-**kickdesk startup order:** `build` → `publish` (bundle + `manifest.json` + sha256 for `--base-url http://127.0.0.1:7099`) → `up` (serve `publish/` on 7099). Skipping `publish` after a rebuild leaves PW loading a stale hash or wrong `moduleUrl`.
-
-- **`pnpm start`** in kickagent is the **CLI**, not standalone or `serve-publish`.
-- Hosts must **not** aim publicweb at 7098 for the plugin contract; use 7099.
-
-**Canonical detail in the kickagent repo:** `~/projects/kickagent/docs/ports.md` (`docs/ports.md` in that checkout).
+Do not point integration consumers at the standalone port when the contract server is required.
 
 ## Ports we deliberately avoid on the host
 
 | Port | Why |
 |------|-----|
-| 5173 | Vite default — every tutorial uses it |
+| 5173 | Vite default |
 | 3000 | CRA / many frontends |
-| 5432 | Every Docker Postgres example |
-
-Other projects on your laptop can keep using those; KAM repos use the table above.
+| 5432 | Docker Postgres default |
 
 ## After changing Postgres host ports
 
-Recreate the Docker container (host mapping is fixed at create time):
+Recreate the Docker container (host mapping is fixed at create time). Update local `.env` if it still points at old ports.
 
-```bash
-# publicweb
-pnpm db:down && pnpm db:up
+## Adding a new app decade
 
-# merch-api
-make local-db-down && make local-db-up
-# or: make local-db-reset
-```
-
-Update your local `.env` if it still points at old ports (5433 or 5432).
-
-## Adding a new repo
-
-Pick an unused decade (e.g. **52xx**, **81xx**), document it here and in the app's published manifest, and use `+0` / `+1` / `+43` for app / gateway / Postgres.
+Pick an unused decade (e.g. **52xx**, **81xx**), document it in your org notes and in the app's **published manifest**, and use `+0` / `+1` / `+43` for app / gateway / Postgres.

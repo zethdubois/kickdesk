@@ -183,15 +183,14 @@ func SetupConfigHint() string {
 	}
 	return fmt.Sprintf(`Kickdesk setup
 
-  Registry:     %s/config.json     (which repos — see examples/config.json)
+  Registry:     %s/config.json     (app ids + labels — see examples/config.json)
   Profiles:     %s/*.json          (layout — see examples/profiles/)
-  App manifests: published by each repo (~/.config/<id>/manifest.json)
-                 template: examples/manifest.sample.json
+  App manifests: ~/.config/<id>/manifest.json (includes path; see manifest.sample.json)
 
   cp examples/config.json %s/config.json
   cp examples/profiles/two-up.json %s/two-up.json
   kickdesk -c              # pick profile (hotkeys); saves last.cnfg
 
 Each app must publish a manifest — see docs/MANIFEST.md
-`, dir, dir, dir)
+`, dir, dir, dir, dir)
 }

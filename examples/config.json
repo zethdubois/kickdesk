@@ -1,14 +1,9 @@
 {
   "apps": {
     "publicweb": {
-      "path": "~/projects/publicweb",
       "label": "Public Web"
     },
-    "kickagent": {
-      "path": "~/projects/kickagent"
-    },
-    "merch-api": {
-      "path": "~/projects/merch-api"
-    }
+    "kickagent": {},
+    "merch-api": {}
   }
 }

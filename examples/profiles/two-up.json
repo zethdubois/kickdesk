@@ -1,7 +1,7 @@
 {
-  "app_order": ["publicweb", "kickagent"],
+  "app_order": ["fixture-web", "fixture-agent"],
   "labels": {
-    "publicweb": "Public Web"
+    "fixture-web": "Web"
   },
   "tmux": {
     "enabled": true,

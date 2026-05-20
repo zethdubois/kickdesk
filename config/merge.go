@@ -55,18 +55,17 @@ func parseAppEntry(name string, raw json.RawMessage) (App, string, error) {
 	if err := json.Unmarshal(raw, &app); err != nil {
 		return App{}, "", err
 	}
-	if app.Path == "" {
-		return App{}, "", fmt.Errorf("missing path")
-	}
 
 	// Legacy inline: commands or ports defined in central config.
 	if len(app.Commands) > 0 || len(app.Ports) > 0 ||
 		len(app.Workflows.Start) > 0 || len(app.Workflows.Stop) > 0 {
+		if app.Path == "" {
+			return App{}, "", fmt.Errorf("missing path")
+		}
 		return app, "", nil
 	}
 
 	ref := AppRef{
-		Path:     app.Path,
 		Label:    app.Label,
 		Manifest: app.Manifest,
 	}
@@ -74,17 +73,9 @@ func parseAppEntry(name string, raw json.RawMessage) (App, string, error) {
 }
 
 func resolveFromManifest(registryName string, ref AppRef) (App, string, error) {
-	resolvedPath, err := ExpandPath(ref.Path)
+	manifestPath, err := discoverManifest(registryName, ref)
 	if err != nil {
 		return App{}, "", err
-	}
-
-	manifestPath, err := discoverManifest(registryName, ref, resolvedPath)
-	if err != nil {
-		return App{}, "", err
-	}
-	if manifestPath == "" {
-		return App{}, "", fmt.Errorf("no manifest found; add commands inline or publish a manifest")
 	}
 
 	man, err := LoadManifest(manifestPath)
@@ -94,23 +85,22 @@ func resolveFromManifest(registryName string, ref AppRef) (App, string, error) {
 	if man.ID != registryName {
 		return App{}, "", fmt.Errorf("manifest id %q does not match registry key %q", man.ID, registryName)
 	}
+	if man.Path == "" {
+		return App{}, "", fmt.Errorf("manifest %s: missing path — re-run publish", manifestPath)
+	}
 
-	app := man.ToApp(ref.Path, ref.Label)
+	app := man.ToApp(ref.Label)
 	return overlaySparse(app, ref), manifestPath, nil
 }
 
 func overlaySparse(base App, ref AppRef) App {
-	// Registry only overrides path/label/manifest; manifest is authoritative for ops.
 	if ref.Label != "" {
 		base.Label = ref.Label
-	}
-	if ref.Path != "" {
-		base.Path = ref.Path
 	}
 	return base
 }
 
-func discoverManifest(registryName string, ref AppRef, repoPath string) (string, error) {
+func discoverManifest(registryName string, ref AppRef) (string, error) {
 	if ref.Manifest != "" {
 		p, err := ExpandPath(ref.Manifest)
 		if err != nil {
@@ -133,21 +123,15 @@ func discoverManifest(registryName string, ref AppRef, repoPath string) (string,
 	}
 
 	home, err := os.UserHomeDir()
-	if err == nil {
-		xdg := filepath.Join(home, ".config", registryName, "manifest.json")
-		if _, err := os.Stat(xdg); err == nil {
-			return xdg, nil
-		}
+	if err != nil {
+		return "", fmt.Errorf("cannot resolve home directory: %w", err)
 	}
-
-	candidates := []string{
-		filepath.Join(repoPath, ".kickdesk.json"),
-		filepath.Join(repoPath, ".kickdesk", "manifest.json"),
+	xdg := filepath.Join(home, ".config", registryName, "manifest.json")
+	if _, err := os.Stat(xdg); err == nil {
+		return xdg, nil
 	}
-	for _, p := range candidates {
-		if _, err := os.Stat(p); err == nil {
-			return p, nil
-		}
-	}
-	return "", nil
+	return "", fmt.Errorf(
+		"no published manifest at %s — run the app's publish command (see docs/MANIFEST.md)",
+		xdg,
+	)
 }

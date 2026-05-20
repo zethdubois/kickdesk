@@ -1,0 +1,26 @@
+{
+  "id": "fixture-api",
+  "path": "testdata/fixtures/fixture-api",
+  "port_family": 80,
+  "primary_port": 8000,
+  "ports": [
+    { "role": "api", "port": 8000 },
+    { "role": "gateway", "port": 8001 },
+    { "role": "db", "port": 8043 }
+  ],
+  "url": "http://localhost:8000/docs",
+  "workflows": {
+    "start": ["db", "migrate", "up"],
+    "stop": ["stop-api", "stop-gateway", "down"]
+  },
+  "commands": {
+    "up": "true",
+    "down": "true",
+    "build": "true",
+    "db": "true",
+    "migrate": "true",
+    "migrate-status": "true",
+    "stop-api": "true",
+    "stop-gateway": "true"
+  }
+}
