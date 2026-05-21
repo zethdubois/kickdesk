@@ -83,6 +83,7 @@ Only the four KD paths listed above, plus the subscriber repo’s own files.
 - Kickdesk Go source, `testdata/`, internal fixtures
 - Operator `~/.config/kickdesk/config.json` (other apps’ registry/layout)
 - Other apps’ `~/.config/<id>/` trees
+- **Do not write** to the Kickdesk repo when wiring a subscriber (read `readonlyFiles` only).
 
 ### Filesystem access
 
@@ -291,7 +292,7 @@ Kickdesk reads this file when the **db** port is up; otherwise it may run `comma
 | 4 | Agent | Add publish script → `~/.config/<app-id>/manifest.json` |
 | 5 | Agent | Add migrate-status script (if DB) → stdout + `migrate-status` file |
 | 6 | Agent | Wire `package.json` (or Makefile) publish/migrate scripts |
-| 7 | Agent | Optional: `AGENTS.md` section, `.cursor/rules/kickdesk.mdc`, README habit table |
+| 7 | Agent | **Recommended:** `.cursor/rules/kickdesk.mdc` (template below); optional `AGENTS.md` section + README Kickdesk habits |
 | 8 | Human | Register app id in `~/.config/kickdesk/config.json` |
 | 9 | Human | Run publish + migrate-status |
 | 10 | Human | `kickdesk config validate --app <app-id>` |
@@ -319,11 +320,69 @@ kickdesk config validate --app <app-id>
 
 ---
 
-## IDE hook (optional, subscriber repo)
+## IDE hook (recommended — subscriber repo)
 
-**Cursor** — `.cursor/rules/kickdesk.mdc` with globs on `kickdesk.registration.json`, manifest scripts, port config files. Body: read registration first; read KD `readonlyFiles` for schema; update manifest source for values; run publish/migrate per table above; do not add `.kickdesk.json` in repo.
+Commit **`.cursor/rules/kickdesk.mdc`** so agents follow the same publish/migrate habits. Adapt globs and the DB block to your stack; keep `appId` and `~/.config/<app-id>/` in sync with `kickdesk.registration.json`.
 
-**AGENTS.md** — Short Kickdesk section: link `kickdesk.registration.json`, this robots doc (via registration), and app README for day-to-day habits.
+**AGENTS.md** — Short Kickdesk section: link `kickdesk.registration.json`, this robots doc (via registration `readonlyFiles`), and the app README Kickdesk habits (anchor when present).
+
+### Cursor rule template
+
+Create `.cursor/rules/kickdesk.mdc` in the **subscriber repo** (not in the Kickdesk repo):
+
+```markdown
+---
+description: Kickdesk subscriber — ports, manifest publish
+globs:
+  - kickdesk.registration.json
+  - package.json
+  - scripts/kickdesk-manifest.ts
+  - scripts/publish-kickdesk-manifest.ts
+  # Add port-truth files for this app, for example:
+  # - vite.config.ts
+  # - docker-compose.yml
+  # - docs/ports.md
+  # - src/serve-publish.ts
+  # If DB app, also:
+  # - scripts/migrate-status.ts
+---
+
+# Kickdesk integration
+
+This app is a **Kickdesk subscriber** (`appId`: `<app-id>`). Read [`kickdesk.registration.json`](../../kickdesk.registration.json) first.
+
+**Human-confirmed org fields:** registry `id` and `port_family` — do not change in the manifest source without explicit human confirmation (see minimum human input above).
+
+When changing dev ports, Docker compose host mappings, checkout path, `package.json` scripts referenced by workflows, or Kickdesk command strings:
+
+1. Read Kickdesk spec files from `kickdesk.registration.json` → `kickdeskSpec.readonlyFiles` (resolve `kickdeskSpec.rootEnv` or `kickdeskSpec.root`, e.g. sibling `../kickdesk`). Start with `docs/subscriber-setup-for-robots.md`.
+2. Update values in [`scripts/kickdesk-manifest.ts`](../../scripts/kickdesk-manifest.ts) (or `.js`) from **repo truth** — do not copy `examples/manifest.sample.json` verbatim. Publish sets `path` from repo cwd.
+3. Run the publish command from registration (e.g. `pnpm kickdesk:publish-manifest`) after path, port, script, or workflow key changes.
+4. **If this app has a database:** run migrate-status from registration (e.g. `pnpm db:migrate:status`) after db up, migrate, or pulling new migrations. **If no database:** omit this step and omit `status.migrate`, `migrate-status` script, and `publish.migrateStatus` in registration.
+
+Do not add `.kickdesk.json` in this repo. Publish only to `~/.config/<app-id>/`.
+
+Day-to-day when-to-run: app README Kickdesk section (e.g. `README.md#kickdesk-local-cockpit` when present).
+```
+
+### Adapting the template
+
+| Customize | Action |
+|-----------|--------|
+| `appId` / config dir | Match `kickdesk.registration.json` |
+| Manifest script extension | `.ts` or `.js` to match your repo |
+| `globs` | Add every file that is **source of truth** for dev ports and workflow scripts |
+| Step 4 | Keep only for DB apps; delete the “If no database” sentence when migrate applies |
+| README link | Point at your subscriber README anchor |
+
+**Reference subscribers:** `publicweb` (web + DB), `kickagent` (70xx tooling, no Kickdesk DB block).
+
+### Agents and the Kickdesk repo
+
+- **`kickdesk.registration.json` does not grant write access** to the Kickdesk checkout.
+- Agents should treat the Kickdesk repo as **read-only** for contract docs (`readonlyFiles` only).
+- Subscriber changes belong in the app repo (`scripts/kickdesk-manifest.*`, publish output under `~/.config/<app-id>/`).
+- If only the subscriber repo is open, set `KICKDESK_ROOT` or use a multi-root workspace so agents can read `MANIFEST.md` and related files.
 
 ---
 
