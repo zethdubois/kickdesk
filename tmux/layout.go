@@ -34,6 +34,8 @@ type BootstrapOpts struct {
 	TopN        int
 	Session     string
 	ProfileName string
+	// AppPaths maps app id → expanded checkout path (manifest path) for server pane cwd.
+	AppPaths map[string]string
 }
 
 // Bootstrap builds the N+1 pane layout and attaches (or re-layouts the current window).
@@ -67,12 +69,13 @@ func Bootstrap(opts BootstrapOpts) error {
 		if !ConfirmStartTmux() {
 			return fmt.Errorf("cancelled")
 		}
-		return bootstrapNewSession(apps, topN, bin, sess, opts.ProfileName)
+		return bootstrapNewSession(opts, apps, topN, bin, sess)
 	}
-	return bootstrapRelayout(apps, topN, bin, sess, opts.ProfileName)
+	return bootstrapRelayout(opts, apps, topN, bin, sess)
 }
 
-func bootstrapNewSession(apps []string, topN int, bin, sess, profileName string) error {
+func bootstrapNewSession(opts BootstrapOpts, apps []string, topN int, bin, sess string) error {
+	profileName := opts.ProfileName
 	_ = run("kill-session", "-t", sess)
 
 	w, h := termSize()
@@ -83,6 +86,9 @@ func bootstrapNewSession(apps []string, topN int, bin, sess, profileName string)
 	target := sess + ":0"
 	layout, err := applyLayout(target, apps)
 	if err != nil {
+		return err
+	}
+	if err := cdServerPanes(layout, opts.AppPaths); err != nil {
 		return err
 	}
 	menuCmd := buildChildMenuCmd(topN, bin, profileName, layout)
@@ -96,7 +102,8 @@ func bootstrapNewSession(apps []string, topN int, bin, sess, profileName string)
 	return cmd.Run()
 }
 
-func bootstrapRelayout(apps []string, topN int, bin, sess, profileName string) error {
+func bootstrapRelayout(opts BootstrapOpts, apps []string, topN int, bin, sess string) error {
+	profileName := opts.ProfileName
 	win, err := currentWindow()
 	if err != nil {
 		return err
@@ -109,9 +116,9 @@ func bootstrapRelayout(apps []string, topN int, bin, sess, profileName string) e
 	target := win
 	if count > 1 {
 		parts := strings.SplitN(win, ":", 2)
-		sess := parts[0]
-		_ = run("kill-window", "-t", sess+":kickdesk-dashboard")
-		if err := run("new-window", "-d", "-n", "kickdesk-dashboard", "-t", sess); err != nil {
+		sessName := parts[0]
+		_ = run("kill-window", "-t", sessName+":kickdesk-dashboard")
+		if err := run("new-window", "-d", "-n", "kickdesk-dashboard", "-t", sessName); err != nil {
 			return err
 		}
 		target, err = currentWindow()
@@ -126,11 +133,32 @@ func bootstrapRelayout(apps []string, topN int, bin, sess, profileName string) e
 	if err != nil {
 		return err
 	}
+	if err := cdServerPanes(layout, opts.AppPaths); err != nil {
+		return err
+	}
 	menuCmd := buildChildMenuCmd(topN, bin, profileName, layout)
 	if err := run("send-keys", "-t", layout.menuID, menuCmd, "C-m"); err != nil {
 		return err
 	}
 	return run("select-pane", "-t", layout.menuID)
+}
+
+// cdServerPanes sends cd to each app pane so git/file work starts in the manifest path.
+func cdServerPanes(layout layoutResult, paths map[string]string) error {
+	if len(paths) == 0 {
+		return nil
+	}
+	for app, paneID := range layout.apps {
+		dir, ok := paths[app]
+		if !ok || dir == "" {
+			continue
+		}
+		cmd := "cd " + shellQuote(dir)
+		if err := run("send-keys", "-t", paneID, cmd, "C-m"); err != nil {
+			return fmt.Errorf("cd pane %s: %w", app, err)
+		}
+	}
+	return nil
 }
 
 func applyLayout(target string, apps []string) (layoutResult, error) {

@@ -164,11 +164,13 @@ func runMenu(opts cliOpts) {
 	if rt.TmuxEnabled() && !tmux.InChild() {
 		top := rt.TmuxTop()
 		names := rt.Config.OrderedAppNames()
+		appPaths := tmuxAppPaths(rt, names, top)
 		if err := tmux.Bootstrap(tmux.BootstrapOpts{
 			AppNames:    names,
 			TopN:        top,
 			Session:     rt.TmuxSessionName(),
 			ProfileName: rt.ProfileName,
+			AppPaths:    appPaths,
 		}); err != nil {
 			if err.Error() == "cancelled" {
 				os.Exit(0)
@@ -183,6 +185,28 @@ func runMenu(opts cliOpts) {
 		fmt.Fprintf(os.Stderr, "kickdesk: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func tmuxAppPaths(rt *config.Runtime, names []string, topN int) map[string]string {
+	paths := make(map[string]string)
+	if topN > len(names) {
+		topN = len(names)
+	}
+	for _, name := range names[:topN] {
+		if rt.Config.AppErrors[name] != nil {
+			continue
+		}
+		app, ok := rt.Config.Apps[name]
+		if !ok {
+			continue
+		}
+		dir, err := app.ResolvedPath()
+		if err != nil {
+			continue
+		}
+		paths[name] = dir
+	}
+	return paths
 }
 
 func printManifestHint(rt *config.Runtime) {
