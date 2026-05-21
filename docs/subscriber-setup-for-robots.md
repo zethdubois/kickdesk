@@ -8,6 +8,41 @@
 
 ---
 
+## Minimum human input (required — ask if missing)
+
+Some manifest fields are **organizational decisions**, not something to infer by scanning the subscriber repo. Humans often hand agents **only this guide** and omit them — **stop and ask** before implementing `kickdesk-manifest` sources or running publish.
+
+| Input | Example | Who decides |
+|-------|---------|-------------|
+| **`id`** | `kickagent` | **Human** (must match kickdesk registry key). You may propose from repo/package name; human confirms. |
+| **`port_family`** | `70` | **Human** (decade on this machine — see [DEV_PORTS.md](DEV_PORTS.md)). You may propose from stack type; human confirms no collision with other apps. |
+
+Minimal handoff the human should provide (or confirm after your proposal):
+
+```json
+{
+  "id": "kickagent",
+  "port_family": 70
+}
+```
+
+**Do not** copy `id` or `port_family` from `manifest.sample.json` (`my-app` / `50` are placeholders).
+
+**If `id` or `port_family` is missing or unclear:** ask explicitly, e.g. “Which kickdesk app id should I register, and which port family (50xx / 70xx / 80xx or new decade) per DEV_PORTS?” Do not publish until answered.
+
+### What you derive from the repo (after human confirms `id` + `port_family`)
+
+| Field | Source |
+|-------|--------|
+| `path` | Checkout path at publish time |
+| `primary_port`, `ports[]`, `url` | Repo truth (vite, compose, `.env.example`, Makefile) **within** the approved family |
+| `commands`, `workflows` | Real scripts/targets in the repo (e.g. `package.json`, `Makefile`) |
+| `status.migrate` | If the app has DB migrations — path under `~/.config/<id>/migrate-status` |
+
+Use [DEV_PORTS.md](DEV_PORTS.md) to sanity-check ports against the chosen decade (+0 HTTP, +43 Postgres host, etc.). The rest of the manifest is your job from the repo; the two fields above are the human’s.
+
+---
+
 ## Read this first (ordered)
 
 Resolve the Kickdesk repo from the subscriber’s `kickdesk.registration.json`:
@@ -73,24 +108,15 @@ Set `configDir` in registration to `~/.config/<app-id>`. The manifest’s `statu
 
 ---
 
-## Human step: choose port family
+## Port family reference (after human chooses `port_family`)
 
-**Agents propose; humans approve** the port decade so multiple apps do not collide on one machine.
-
-Read [DEV_PORTS.md](DEV_PORTS.md) (org-specific reference). Glance rule:
+Read [DEV_PORTS.md](DEV_PORTS.md) once the human has confirmed the decade. Glance rule:
 
 - **50xx** — web / Vite-style app (`+0` HTTP, `+43` Postgres host)
 - **70xx** — agent / tooling HTTP (e.g. publish **7099**)
 - **80xx** — API stack (`+0` API, `+1` gateway, `+43` Postgres)
 
-Pick an unused decade for new products. Map **your** repo’s real ports into:
-
-- `port_family` (e.g. `50`)
-- `primary_port` (main HTTP or primary process)
-- `ports[]` — `{ "role": "...", "port": N }` for status table
-- `url` — browser or health URL Kickdesk can show
-
-Derive numbers from repo truth (vite, compose, env docs) — not from `manifest.sample.json`.
+Then map **repo truth** into `primary_port`, `ports[]`, and `url` — not from `manifest.sample.json`. New product decades (e.g. **52xx**) require explicit human approval and org documentation in DEV_PORTS.
 
 ---
 
@@ -259,7 +285,7 @@ Kickdesk reads this file when the **db** port is up; otherwise it may run `comma
 
 | Step | Who | Action |
 |------|-----|--------|
-| 1 | Human | Choose `app-id` and port family ([DEV_PORTS.md](DEV_PORTS.md)) |
+| 1 | Human | Provide or confirm **`id`** and **`port_family`** ([DEV_PORTS.md](DEV_PORTS.md)); agent asks if missing |
 | 2 | Agent | Add `kickdesk.registration.json` with four `readonlyFiles` |
 | 3 | Agent | Add `scripts/kickdesk-manifest.*` with real ports/commands + `path` |
 | 4 | Agent | Add publish script → `~/.config/<app-id>/manifest.json` |
