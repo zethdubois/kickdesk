@@ -80,6 +80,8 @@ Launch: `kickdesk -c` (picker) or plain `kickdesk` (uses `last.cnfg`).
 
 ## Cross-subscriber setup (recommended)
 
+**Agents:** start with [subscriber-setup-for-robots.md](subscriber-setup-for-robots.md) (one-sheet checklist). This section remains the normative contract alongside that doc; overlap is intentional.
+
 A **reference subscriber** exists in the wild (first full implementation); mirror the same **roles** in other app repos. Adapt `app-id`, ports, and commands to your stack.
 
 ### Roles
@@ -117,7 +119,12 @@ Tool-agnostic marker for humans and agents. Example shape (strict JSON):
   "kickdeskSpec": {
     "root": "../kickdesk",
     "rootEnv": "KICKDESK_ROOT",
-    "readonlyFiles": ["docs/MANIFEST.md", "examples/manifest.sample.json"]
+    "readonlyFiles": [
+      "docs/subscriber-setup-for-robots.md",
+      "examples/manifest.sample.json",
+      "docs/MANIFEST.md",
+      "docs/DEV_PORTS.md"
+    ]
   },
   "publish": {
     "manifest": "pnpm kickdesk:publish-manifest",
@@ -165,10 +172,12 @@ Kickdesk does not configure IDEs. Each **subscriber app repo** documents how age
 
 Resolve `kickdeskSpec.root` using `kickdeskSpec.rootEnv` when set, else `root`, then read paths in `kickdeskSpec.readonlyFiles`:
 
-| File                            | Purpose                                        |
-| ------------------------------- | ---------------------------------------------- |
-| `docs/MANIFEST.md`              | Discovery, schema, subscriber setup (this doc) |
-| `examples/manifest.sample.json` | Field shapes only — **not** your app’s ports   |
+| File                                   | Purpose                                        |
+| -------------------------------------- | ---------------------------------------------- |
+| `docs/subscriber-setup-for-robots.md`  | **Start here** — executable setup checklist    |
+| `examples/manifest.sample.json`        | Field shapes only — **not** your app’s ports   |
+| `docs/MANIFEST.md`                     | Discovery, schema, operator profiles (this doc) |
+| `docs/DEV_PORTS.md`                    | Org port-family reference — human picks family |
 
 **Do not** treat as required agent reads: Kickdesk Go source, `testdata/`, operator `~/.config/kickdesk/config.json`, other apps’ `~/.config/<id>/` trees.
 
