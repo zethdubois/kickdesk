@@ -17,6 +17,11 @@ const (
 	defaultSess = "kickdesk"
 )
 
+// Active reports whether this process is attached to a tmux client.
+func Active() bool {
+	return os.Getenv("TMUX") != ""
+}
+
 // InChild reports whether this process is the menu pane inside a dashboard layout.
 func InChild() bool {
 	return os.Getenv(envChild) == "1"
@@ -65,13 +70,13 @@ func Bootstrap(opts BootstrapOpts) error {
 
 	apps := appNames[:topN]
 
-	if os.Getenv("TMUX") == "" {
-		if !ConfirmStartTmux() {
-			return fmt.Errorf("cancelled")
-		}
-		return bootstrapNewSession(opts, apps, topN, bin, sess)
+	if Active() {
+		return fmt.Errorf("already inside tmux — layout is unchanged; run kickdesk in the kickdesk-menu pane")
 	}
-	return bootstrapRelayout(opts, apps, topN, bin, sess)
+	if !ConfirmStartTmux() {
+		return fmt.Errorf("cancelled")
+	}
+	return bootstrapNewSession(opts, apps, topN, bin, sess)
 }
 
 func bootstrapNewSession(opts BootstrapOpts, apps []string, topN int, bin, sess string) error {
@@ -100,47 +105,6 @@ func bootstrapNewSession(opts BootstrapOpts, apps []string, topN int, bin, sess 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
-}
-
-func bootstrapRelayout(opts BootstrapOpts, apps []string, topN int, bin, sess string) error {
-	profileName := opts.ProfileName
-	win, err := currentWindow()
-	if err != nil {
-		return err
-	}
-
-	count, err := paneCount(win)
-	if err != nil {
-		return err
-	}
-	target := win
-	if count > 1 {
-		parts := strings.SplitN(win, ":", 2)
-		sessName := parts[0]
-		_ = run("kill-window", "-t", sessName+":kickdesk-dashboard")
-		if err := run("new-window", "-d", "-n", "kickdesk-dashboard", "-t", sessName); err != nil {
-			return err
-		}
-		target, err = currentWindow()
-		if err != nil {
-			return err
-		}
-	} else {
-		_ = run("rename-window", "-t", win, "kickdesk-dashboard")
-	}
-
-	layout, err := applyLayout(target, apps)
-	if err != nil {
-		return err
-	}
-	if err := cdServerPanes(layout, opts.AppPaths); err != nil {
-		return err
-	}
-	menuCmd := buildChildMenuCmd(topN, bin, profileName, layout)
-	if err := run("send-keys", "-t", layout.menuID, menuCmd, "C-m"); err != nil {
-		return err
-	}
-	return run("select-pane", "-t", layout.menuID)
 }
 
 // cdServerPanes sends cd to each app pane so git/file work starts in the manifest path.
@@ -303,17 +267,6 @@ func currentWindow() (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
-func paneCount(target string) (int, error) {
-	out, err := runOut("list-panes", "-t", target, "-F", "#{pane_index}")
-	if err != nil {
-		return 0, err
-	}
-	if strings.TrimSpace(out) == "" {
-		return 0, nil
-	}
-	return len(strings.Fields(strings.TrimSpace(out))), nil
-}
-
 func run(args ...string) error {
 	cmd := exec.Command("tmux", args...)
 	out, err := cmd.CombinedOutput()
@@ -342,7 +295,7 @@ func shellQuote(s string) string {
 // termSize returns cols x rows for a new detached session (avoids 0-size "size missing").
 func termSize() (width, height int) {
 	width, height = 220, 50
-	if os.Getenv("TMUX") != "" {
+	if Active() {
 		if w, h, ok := tmuxClientSize(); ok {
 			return w, h
 		}

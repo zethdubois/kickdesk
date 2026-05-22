@@ -42,10 +42,15 @@ type AppStatusOpts struct {
 	Migrate string `json:"migrate"`
 }
 
-// Workflows lists ordered command keys for startup and shutdown.
+// Workflows lists ordered command keys for startup, shutdown, and optional
+// hot-reload republish while the app is running.
 type Workflows struct {
 	Start []string `json:"start"`
 	Stop  []string `json:"stop"`
+	// Republish is an optional ordered list of command keys exposed in the
+	// menu while the app is running. Apps that omit it behave exactly as
+	// before (only the stop workflow is offered while running).
+	Republish []string `json:"republish,omitempty"`
 }
 
 // CommandEntry is one named shell command for an app.
@@ -120,6 +125,20 @@ func (c *Config) WorkflowKeys(appName string, running bool) ([]string, error) {
 		return nil, fmt.Errorf("app %q: no workflows.start defined", appName)
 	}
 	return append([]string(nil), app.Workflows.Start...), nil
+}
+
+// RepublishKeys returns the optional hot-reload republish command keys for an
+// app. Returns (nil, nil) when the app does not define workflows.republish;
+// returns an error only when the app id itself is unknown.
+func (c *Config) RepublishKeys(appName string) ([]string, error) {
+	app, ok := c.Apps[appName]
+	if !ok {
+		return nil, fmt.Errorf("unknown app %q", appName)
+	}
+	if len(app.Workflows.Republish) == 0 {
+		return nil, nil
+	}
+	return append([]string(nil), app.Workflows.Republish...), nil
 }
 
 // CommandsList returns sorted command entries for one app.
@@ -287,6 +306,10 @@ func (c *Config) Validate() []ValidationError {
 			errs = append(errs, ValidationError{App: name, Message: "workflows.stop must not be empty"})
 		} else {
 			errs = append(errs, c.validateWorkflowKeys(name, app.Workflows.Stop, "stop")...)
+		}
+		// workflows.republish is optional; only validate when present.
+		if len(app.Workflows.Republish) > 0 {
+			errs = append(errs, c.validateWorkflowKeys(name, app.Workflows.Republish, "republish")...)
 		}
 	}
 

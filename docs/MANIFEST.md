@@ -27,9 +27,48 @@ See [examples/manifest.sample.json](../examples/manifest.sample.json). Required 
 | `primary_port`             | recommended | Running/stopped detection                                |
 | `commands`                 | yes         | At least `up`, `down`, `build`                           |
 | `workflows.start` / `stop` | yes         | Ordered command keys                                     |
+| `workflows.republish`      | no          | Ordered command keys for hot-reload while app is running |
 | `status.migrate`           | no          | File path; one line: `ok`, `pending:N`, or `unavailable` |
 
 Publish must write `path` (typically the repo root used when publishing). If `status.migrate` is set and the file exists, kickdesk reads it when the db port is up. Otherwise it runs `commands.migrate-status` when defined.
+
+### `workflows.republish` — hot reload while running
+
+`workflows.republish` is **optional**. When defined and non-empty, Kickdesk exposes those steps in the menu **while the app is running**, alongside `workflows.stop`:
+
+- Numbering is continuous 1..N across `stop` and `republish` (Shutdown subsection first, then Republish).
+- Pressing the numeric key for a republish step runs **only** that step (it does not run `stop-server` first).
+- The convenience key **`p`** runs every `workflows.republish` step in sequence (and does not run `stop`).
+- The procedure title becomes `Shutdown · Republish` when republish is defined.
+
+Apps that omit `workflows.republish` keep the previous behavior (only `stop` is offered while running).
+
+Validation rules (same as `start` / `stop`):
+
+- Every key listed in `workflows.republish` must exist in `commands`.
+- `workflows.republish` must not contain empty keys.
+
+Example (kickagent: rebuild + republish artifacts to the running publish server on port 7099):
+
+```json
+{
+  "workflows": {
+    "start": ["build", "publish-artifacts", "up"],
+    "stop": ["stop-server", "down"],
+    "republish": ["republish"]
+  },
+  "commands": {
+    "build": "pnpm build",
+    "publish-artifacts": "pnpm publish:artifacts -- --base-url http://127.0.0.1:7099",
+    "republish": "pnpm build && pnpm publish:artifacts -- --base-url http://127.0.0.1:7099",
+    "up": "pnpm serve-publish -- --dir publish --port 7099",
+    "down": "true",
+    "stop-server": "fuser -k 7099/tcp 2>/dev/null || true"
+  }
+}
+```
+
+Do **not** add `republish` to `workflows.start` — that would double-publish on every Start. Use a dedicated `republish` command (typically `build && publish-artifacts`) so the menu can re-run only the hot-reload work without bouncing the server.
 
 ## Publishing (app repo responsibility)
 

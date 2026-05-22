@@ -48,9 +48,7 @@ func showMenu(cfg *config.Config, version string, reader *bufio.Reader, state *m
 	status.PrintHub(apps, state.selected)
 
 	appNames := cfg.OrderedAppNames()
-	var keys []string
-	var procedure string
-	var running bool
+	var proc Procedure
 
 	if state.selected != "" {
 		if err := cfg.AppErrors[state.selected]; err != nil {
@@ -61,14 +59,9 @@ func showMenu(cfg *config.Config, version string, reader *bufio.Reader, state *m
 			fmt.Println("  Fix: publish manifest to ~/.config/<app-id>/manifest.json (see docs/MANIFEST.md)")
 			fmt.Println(strings.Repeat("─", 56))
 		} else {
-			running = status.AppRunning(cfg, state.selected)
-			if running {
-				procedure = "Shutdown"
-			} else {
-				procedure = "Startup"
-			}
+			running := status.AppRunning(cfg, state.selected)
 			migrateSt := migrateStatusForApp(apps, state.selected)
-			keys, err = EffectiveWorkflowKeys(cfg, state.selected, running, migrateSt)
+			proc, err = EffectiveProcedure(cfg, state.selected, running, migrateSt)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v\n", err)
 				if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
@@ -78,14 +71,14 @@ func showMenu(cfg *config.Config, version string, reader *bufio.Reader, state *m
 				state.completed = 0
 				return nil
 			}
-			if state.completed > len(keys) {
-				state.completed = len(keys)
+			if state.completed > len(proc.Keys) {
+				state.completed = len(proc.Keys)
 			}
-			printWorkflow(cfg, state.selected, procedure, keys, state.completed)
+			printWorkflow(cfg, state.selected, proc, state.completed)
 		}
 	}
 
-	printFooter(state.selected != "", len(appNames), len(keys), tmuxTopHint(cfg))
+	printFooter(state.selected != "", len(appNames), proc.HasRepublish(), tmuxTopHint(cfg))
 
 	key, err := readKey(reader)
 	if err != nil {
@@ -106,14 +99,22 @@ func showMenu(cfg *config.Config, version string, reader *bufio.Reader, state *m
 	if state.selected == "" {
 		return handleHubKey(cfg, reader, state, appNames, key)
 	}
-	return handleAppKey(cfg, reader, state, key, keys)
+	return handleAppKey(cfg, reader, state, key, proc)
 }
 
-func printWorkflow(cfg *config.Config, appName, procedure string, keys []string, completed int) {
+func printWorkflow(cfg *config.Config, appName string, proc Procedure, completed int) {
 	app := cfg.Apps[appName]
-	fmt.Printf("\n%s — %s procedure\n", appName, procedure)
+	fmt.Printf("\n%s — %s procedure\n", appName, proc.Title)
 	fmt.Println(strings.Repeat("─", 56))
-	for i, key := range keys {
+	for i, key := range proc.Keys {
+		if proc.HasRepublish() {
+			if i == 0 {
+				fmt.Println("  Shutdown")
+			}
+			if i == proc.RepublishFrom {
+				fmt.Println("  Republish")
+			}
+		}
 		shell := app.Commands[key]
 		mark := " "
 		if i < completed {
@@ -144,12 +145,16 @@ func tmuxTopHint(cfg *config.Config) string {
 	return fmt.Sprintf("tmux top: %s", strings.Join(names[:topN], ", "))
 }
 
-func printFooter(appSelected bool, appCount, stepCount int, tmuxHint string) {
+func printFooter(appSelected bool, appCount int, hasRepublish bool, tmuxHint string) {
 	if tmuxHint != "" {
 		fmt.Println(tmuxHint)
 	}
 	if appSelected {
-		fmt.Println("Space next (✓) · Enter all · 1-N run (✓ if next in order) · b back · c catalog · r refresh · q quit")
+		republishHint := ""
+		if hasRepublish {
+			republishHint = " · p republish all"
+		}
+		fmt.Printf("Space next (✓) · Enter all · 1-N run (✓ if next in order)%s · b back · c catalog · r refresh · q quit\n", republishHint)
 	} else {
 		fmt.Printf("1-%d select app · r refresh · q quit\n", appCount)
 	}
@@ -171,8 +176,9 @@ func handleHubKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ap
 	return nil
 }
 
-func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, key byte, keys []string) error {
+func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, key byte, proc Procedure) error {
 	appName := state.selected
+	keys := proc.Keys
 
 	switch key {
 	case 27, 'b', 'B':
@@ -181,6 +187,24 @@ func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ke
 		return nil
 	case 'c', 'C':
 		if showCatalog(cfg, appName, reader) {
+			return errQuit
+		}
+		return nil
+	case 'p', 'P':
+		if !proc.HasRepublish() {
+			fmt.Println("Republish is not configured for this app.")
+			if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
+				return errQuit
+			}
+			return nil
+		}
+		republish := proc.RepublishKeys()
+		if err := run.ExecuteSequence(cfg, appName, republish); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		}
+		// Republish never advances the Shutdown ✓ counter: the app stays
+		// running and the operator may republish repeatedly.
+		if werr := waitReturnToMenu(reader); errors.Is(werr, errQuit) {
 			return errQuit
 		}
 		return nil
@@ -213,7 +237,9 @@ func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ke
 			if idx < len(keys) {
 				if err := runStep(cfg, appName, keys[idx]); err != nil {
 					fmt.Fprintf(os.Stderr, "error: %v\n", err)
-				} else if idx == state.completed {
+				} else if idx == state.completed && !proc.IsRepublishIndex(idx) {
+					// Republish steps are non-destructive and may be re-run
+					// at any time; do not advance the shutdown ✓ cursor.
 					state.completed++
 				}
 				if state.completed >= len(keys) {
@@ -225,7 +251,11 @@ func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ke
 				return nil
 			}
 		}
-		fmt.Println("Unknown key. Space, Enter, 1-N, c, b, r, or q.")
+		hint := "Unknown key. Space, Enter, 1-N, c, b, r, or q."
+		if proc.HasRepublish() {
+			hint = "Unknown key. Space, Enter, 1-N, p, c, b, r, or q."
+		}
+		fmt.Println(hint)
 		if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
 			return errQuit
 		}

@@ -10,13 +10,15 @@
   "url": "http://127.0.0.1:7099/manifest.json",
   "workflows": {
     "start": ["build", "publish", "up"],
-    "stop": ["stop-server"]
+    "stop": ["stop-server"],
+    "republish": ["republish"]
   },
   "commands": {
     "up": "true",
     "down": "true",
     "build": "true",
     "publish": "true",
+    "republish": "true",
     "stop-server": "true"
   }
 }

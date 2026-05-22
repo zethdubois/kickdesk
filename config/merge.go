@@ -61,7 +61,8 @@ func parseAppEntry(name string, raw json.RawMessage) (App, string, error) {
 
 	// Legacy inline: commands or ports defined in central config.
 	if len(app.Commands) > 0 || len(app.Ports) > 0 ||
-		len(app.Workflows.Start) > 0 || len(app.Workflows.Stop) > 0 {
+		len(app.Workflows.Start) > 0 || len(app.Workflows.Stop) > 0 ||
+		len(app.Workflows.Republish) > 0 {
 		if app.Path == "" {
 			return App{}, "", fmt.Errorf("missing path")
 		}

@@ -161,7 +161,10 @@ func runMenu(opts cliOpts) {
 	}
 
 	rt := loadRuntime(opts, false)
-	if rt.TmuxEnabled() && !tmux.InChild() {
+	tmux.TryAdoptDashboard()
+	// Only create a new tmux session from outside tmux; never split/relayout the
+	// current window when the operator is already in a dashboard.
+	if rt.TmuxEnabled() && !tmux.InChild() && !tmux.Active() {
 		top := rt.TmuxTop()
 		names := rt.Config.OrderedAppNames()
 		appPaths := tmuxAppPaths(rt, names, top)

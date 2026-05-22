@@ -10,7 +10,8 @@
   "url": "http://localhost:5000",
   "workflows": {
     "start": ["db-up", "migrate", "up"],
-    "stop": ["stop-server", "db-down"]
+    "stop": ["stop-server", "db-down"],
+    "republish": ["republish"]
   },
   "commands": {
     "up": "pnpm dev",
@@ -19,7 +20,8 @@
     "db-up": "pnpm db:up",
     "migrate": "pnpm db:migrate",
     "migrate-status": "pnpm db:migrate:status",
-    "stop-server": "echo stop app"
+    "stop-server": "echo stop app",
+    "republish": "pnpm build && pnpm publish:artifacts"
   },
   "status": {
     "migrate": "~/.config/my-app/migrate-status"

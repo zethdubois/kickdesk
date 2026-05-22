@@ -56,7 +56,7 @@ func CurrentPaneTitle() (string, error) {
 
 // TryAdoptDashboard enables child mode when running kickdesk manually in the menu pane.
 func TryAdoptDashboard() bool {
-	if InChild() || os.Getenv("TMUX") == "" {
+	if InChild() || !Active() {
 		return false
 	}
 	title, err := CurrentPaneTitle()

@@ -226,6 +226,26 @@ Teardown order — often app first, then infra:
 
 Example: `["stop-server", "db-down"]`
 
+### `workflows.republish` (ordered keys, optional)
+
+Hot-reload steps the menu exposes **while the app is running** — useful when a sibling app (e.g. a publish-server consumer) needs to pull a freshly built artifact without bouncing the server. Apps that omit it keep the previous behavior (only `stop` is offered while running).
+
+| Typical key | Role |
+|-------------|------|
+| `republish` | Rebuild + republish artifacts to the running server (e.g. `pnpm build && pnpm publish:artifacts`) |
+
+Example: `["republish"]`
+
+In the menu (with the app running and `workflows.republish` defined):
+
+- The procedure title becomes `Shutdown · Republish`; Stop steps are numbered first, then Republish (continuous 1..N).
+- Numeric keys run **only** the picked step (so a republish step runs without `stop-server` first).
+- The convenience key **`p`** runs every `workflows.republish` step in sequence and never runs `stop`.
+
+**Do not** add `republish` to `workflows.start` — that would double-publish on every Start. Use a dedicated `republish` command so the menu can re-run only the hot-reload work.
+
+Every key listed in `workflows.republish` must exist in `commands` (validated by `kickdesk config validate`).
+
 ### `commands` map
 
 Every key referenced in `workflows` must exist in `commands`. Common entries:
@@ -241,6 +261,7 @@ Every key referenced in `workflows` must exist in `commands`. Common entries:
 | `migrate` | `pnpm db:migrate` | If using migrations |
 | `migrate-status` | `pnpm db:migrate:status` | If using migrations |
 | `stop-server` | `fuser -k 5000/tcp 2>/dev/null \|\| true` | Match your HTTP port |
+| `republish` | `pnpm build && pnpm publish:artifacts` | If using `workflows.republish` for hot reload |
 
 Use the project’s real package manager and script names.
 
@@ -307,6 +328,7 @@ Subscriber apps often duplicate this in README; minimal reference:
 |----------|-----|
 | Changed checkout `path`, dev ports, compose, workflow keys, or manifest command strings | `publish.manifest` from registration |
 | DB up, migrate, or pulled new migrations | `publish.migrateStatus` from registration |
+| Edited subscriber source and want a hot reload (app already running) | Kickdesk menu: `p` (or the republish step number) — runs `workflows.republish` |
 
 Running **`migrate`** does not require re-publish unless manifest **command strings** or workflow keys changed.
 
