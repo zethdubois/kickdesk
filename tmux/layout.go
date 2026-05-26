@@ -96,7 +96,14 @@ func bootstrapNewSession(opts BootstrapOpts, apps []string, topN int, bin, sess 
 	if err := cdServerPanes(layout, opts.AppPaths); err != nil {
 		return err
 	}
-	menuCmd := buildChildMenuCmd(topN, bin, profileName, layout)
+	menuRoot, err := RepoRoot()
+	if err != nil {
+		return err
+	}
+	if err := cdPane(layout.menuID, menuRoot); err != nil {
+		return fmt.Errorf("cd menu pane: %w", err)
+	}
+	menuCmd := buildChildMenuCmd(topN, bin, profileName, layout, menuRoot)
 	if err := run("send-keys", "-t", layout.menuID, menuCmd, "C-m"); err != nil {
 		return err
 	}
@@ -117,12 +124,16 @@ func cdServerPanes(layout layoutResult, paths map[string]string) error {
 		if !ok || dir == "" {
 			continue
 		}
-		cmd := "cd " + shellQuote(dir)
-		if err := run("send-keys", "-t", paneID, cmd, "C-m"); err != nil {
+		if err := cdPane(paneID, dir); err != nil {
 			return fmt.Errorf("cd pane %s: %w", app, err)
 		}
 	}
 	return nil
+}
+
+func cdPane(paneID, dir string) error {
+	cmd := "cd " + shellQuote(dir)
+	return run("send-keys", "-t", paneID, cmd, "C-m")
 }
 
 func applyLayout(target string, apps []string) (layoutResult, error) {

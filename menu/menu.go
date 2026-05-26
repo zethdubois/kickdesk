@@ -25,6 +25,10 @@ type menuState struct {
 // Run is the interactive command panel loop.
 func Run(cfg *config.Config, version string) error {
 	tmux.TryAdoptDashboard()
+	if root, err := tmux.RepoRoot(); err == nil && root != "" {
+		_ = os.Chdir(root)
+		defer func() { _ = tmux.QueueMenuPaneCd(root) }()
+	}
 	reader := bufio.NewReader(os.Stdin)
 	state := menuState{}
 	for {
@@ -264,8 +268,9 @@ func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ke
 }
 
 func afterProcedureRun(reader *bufio.Reader, state *menuState) error {
+	state.selected = ""
 	state.completed = 0
-	if werr := waitReturnToMenu(reader); errors.Is(werr, errQuit) {
+	if werr := waitReturnToHub(reader); errors.Is(werr, errQuit) {
 		return errQuit
 	}
 	return nil

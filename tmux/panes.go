@@ -104,7 +104,7 @@ func serverPanesInCurrentWindow() (map[string]string, error) {
 	return servers, nil
 }
 
-func buildChildMenuCmd(topN int, bin, profileName string, layout layoutResult) string {
+func buildChildMenuCmd(topN int, bin, profileName string, layout layoutResult, repoRoot string) string {
 	var parts []string
 	parts = append(parts, fmt.Sprintf("%s=1", envChild))
 	parts = append(parts, fmt.Sprintf("%s=%d", envTop, topN))
@@ -115,8 +115,27 @@ func buildChildMenuCmd(topN int, bin, profileName string, layout layoutResult) s
 		parts = append(parts, fmt.Sprintf("%s=%s", PaneEnvKey(app), id))
 	}
 	parts = append(parts, fmt.Sprintf("%s=%s", PaneEnvKey("menu"), layout.menuID))
-	parts = append(parts, shellQuote(bin), "menu")
-	return strings.Join(parts, " ")
+	run := strings.Join(parts, " ") + " " + shellQuote(bin) + " menu"
+	if repoRoot != "" {
+		return "cd " + shellQuote(repoRoot) + " && " + run
+	}
+	return run
+}
+
+// QueueMenuPaneCd sets the menu pane shell cwd when kickdesk exits (tmux only).
+func QueueMenuPaneCd(dir string) error {
+	if !Active() || dir == "" {
+		return nil
+	}
+	title, err := CurrentPaneTitle()
+	if err != nil || title != "kickdesk-menu" {
+		return nil
+	}
+	out, err := runOut("display-message", "-p", "#{pane_id}")
+	if err != nil {
+		return err
+	}
+	return cdPane(strings.TrimSpace(out), dir)
 }
 
 type layoutResult struct {

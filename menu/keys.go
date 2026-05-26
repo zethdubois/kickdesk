@@ -127,7 +127,12 @@ func waitAnyKeyOrQuit(reader *bufio.Reader) error {
 	return waitFor(reader, "Press any key (q quit)... ", nil)
 }
 
-// waitReturnToMenu pauses after a full procedure before refreshing the menu.
+// waitReturnToMenu pauses after a partial action before refreshing the app submenu.
 func waitReturnToMenu(reader *bufio.Reader) error {
 	return waitFor(reader, "Press any key to return to menu (q quit)... ", nil)
+}
+
+// waitReturnToHub pauses after a full procedure before returning to the app hub.
+func waitReturnToHub(reader *bufio.Reader) error {
+	return waitFor(reader, "Press any key to return to main menu (q quit)... ", nil)
 }
