@@ -12,10 +12,10 @@
 
 Some manifest fields are **organizational decisions**, not something to infer by scanning the subscriber repo. Humans often hand agents **only this guide** and omit them — **stop and ask** before implementing `kickdesk-manifest` sources or running publish.
 
-| Input | Example | Who decides |
-|-------|---------|-------------|
-| **`id`** | `kickagent` | **Human** (must match kickdesk registry key). You may propose from repo/package name; human confirms. |
-| **`port_family`** | `70` | **Human** (decade on this machine — see [DEV_PORTS.md](DEV_PORTS.md)). You may propose from stack type; human confirms no collision with other apps. |
+| Input             | Example     | Who decides                                                                                                                                          |
+| ----------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`id`**          | `kickagent` | **Human** (must match kickdesk registry key). You may propose from repo/package name; human confirms.                                                |
+| **`port_family`** | `70`        | **Human** (decade on this machine — see [DEV_PORTS.md](DEV_PORTS.md)). You may propose from stack type; human confirms no collision with other apps. |
 
 Minimal handoff the human should provide (or confirm after your proposal):
 
@@ -32,16 +32,18 @@ Minimal handoff the human should provide (or confirm after your proposal):
 
 ### What you derive from the repo (after human confirms `id` + `port_family`)
 
-| Field | Source |
-|-------|--------|
-| `path` | Checkout path at publish time |
+| Field                            | Source                                                                              |
+| -------------------------------- | ----------------------------------------------------------------------------------- |
+| `path`                           | Checkout path at publish time                                                       |
 | `primary_port`, `ports[]`, `url` | Repo truth (vite, compose, `.env.example`, Makefile) **within** the approved family |
-| `commands`, `workflows` | Real scripts/targets in the repo (e.g. `package.json`, `Makefile`) |
-| `status.migrate` | If the app has DB migrations — path under `~/.config/<id>/migrate-status` |
+| `commands`, `workflows`          | Real scripts/targets in the repo (e.g. `package.json`, `Makefile`)                  |
+| `status.migrate`                 | If the app has DB migrations — path under `~/.config/<id>/migrate-status`           |
 
 Use [DEV_PORTS.md](DEV_PORTS.md) to sanity-check ports against the chosen decade (+0 HTTP, +43 Postgres host, etc.). The rest of the manifest is your job from the repo; the two fields above are the human’s.
 
 ---
+
+ki
 
 ## Read this first (ordered)
 
@@ -51,12 +53,12 @@ Resolve the Kickdesk repo from the subscriber’s `kickdesk.registration.json`:
 
 Then read these paths **under that root** (readonly — requirements only, not your app’s port values):
 
-| Order | Path | Purpose |
-|-------|------|---------|
-| 1 | `docs/subscriber-setup-for-robots.md` | **This file** — setup checklist |
-| 2 | `examples/manifest.sample.json` | JSON field shapes (template `my-app` — do not copy ports) |
-| 3 | `docs/MANIFEST.md` | Discovery rules, schema, operator registry/profiles |
-| 4 | `docs/DEV_PORTS.md` | Org port-family reference — **human chooses family** |
+| Order | Path                                  | Purpose                                                   |
+| ----- | ------------------------------------- | --------------------------------------------------------- |
+| 1     | `docs/subscriber-setup-for-robots.md` | **This file** — setup checklist                           |
+| 2     | `examples/manifest.sample.json`       | JSON field shapes (template `my-app` — do not copy ports) |
+| 3     | `docs/MANIFEST.md`                    | Discovery rules, schema, operator registry/profiles       |
+| 4     | `docs/DEV_PORTS.md`                   | Org port-family reference — **human chooses family**      |
 
 **Optional reference implementation** (copy file layout and scripts, not ports): sibling checkout `../publicweb` if present on disk.
 
@@ -70,11 +72,11 @@ Only the four KD paths listed above, plus the subscriber repo’s own files.
 
 ### Must use for app values (subscriber repo)
 
-| Source | Purpose |
-|--------|---------|
-| `kickdesk.registration.json` | `appId`, `configDir`, publish command names |
-| `scripts/kickdesk-manifest.ts` (or `.js`) | Ports, `workflows`, `commands`, manifest `path` |
-| Repo truth | `vite.config.ts`, `docker-compose.yml`, `package.json`, `Makefile`, etc. |
+| Source                                    | Purpose                                                                  |
+| ----------------------------------------- | ------------------------------------------------------------------------ |
+| `kickdesk.registration.json`              | `appId`, `configDir`, publish command names                              |
+| `scripts/kickdesk-manifest.ts` (or `.js`) | Ports, `workflows`, `commands`, manifest `path`                          |
+| Repo truth                                | `vite.config.ts`, `docker-compose.yml`, `package.json`, `Makefile`, etc. |
 
 **Never** copy `examples/manifest.sample.json` verbatim into your manifest source (`id: "my-app"` and its ports are placeholders).
 
@@ -98,10 +100,10 @@ Only the four KD paths listed above, plus the subscriber repo’s own files.
 
 Kickdesk loads the subscriber’s **published** files (not the git repo’s operational manifest).
 
-| File | Required | Content |
-|------|----------|---------|
-| `~/.config/<app-id>/manifest.json` | **Yes** | Full operational manifest including `path`, `ports`, `commands`, `workflows` |
-| `~/.config/<app-id>/migrate-status` | If app has DB migrations | One line: `ok`, `pending:N`, or `unavailable` |
+| File                                | Required                 | Content                                                                      |
+| ----------------------------------- | ------------------------ | ---------------------------------------------------------------------------- |
+| `~/.config/<app-id>/manifest.json`  | **Yes**                  | Full operational manifest including `path`, `ports`, `commands`, `workflows` |
+| `~/.config/<app-id>/migrate-status` | If app has DB migrations | One line: `ok`, `pending:N`, or `unavailable`                                |
 
 Set `configDir` in registration to `~/.config/<app-id>`. The manifest’s `status.migrate` field should point at `~/.config/<app-id>/migrate-status` when used.
 
@@ -177,10 +179,10 @@ Wire in `package.json`:
 
 **Stdout contract** (one line, exit 0 for `ok` and `pending:N`):
 
-| Output | Meaning |
-|--------|---------|
-| `ok` | DB reachable, schema matches repo migrations |
-| `pending:N` | N migrations not applied (N > 0) |
+| Output        | Meaning                                       |
+| ------------- | --------------------------------------------- |
+| `ok`          | DB reachable, schema matches repo migrations  |
+| `pending:N`   | N migrations not applied (N > 0)              |
 | `unavailable` | Cannot determine (DB down, env missing, etc.) |
 
 Also **write the same line** to `~/.config/<app-id>/migrate-status` on every run.
@@ -205,11 +207,11 @@ Register in manifest `commands` as `migrate-status` and in `workflows.start` aft
 
 List command **keys** in startup order — infrastructure before app:
 
-| Typical key | Role |
-|-------------|------|
-| `db-up` | Start local DB (compose, docker, make) |
-| `migrate` | Apply migrations |
-| `up` | Start dev server / main process |
+| Typical key | Role                                   |
+| ----------- | -------------------------------------- |
+| `db-up`     | Start local DB (compose, docker, make) |
+| `migrate`   | Apply migrations                       |
+| `up`        | Start dev server / main process        |
 
 Example: `["db-up", "migrate", "up"]`
 
@@ -219,10 +221,10 @@ Apps without DB: `["up"]` or `["build", "up"]` as appropriate.
 
 Teardown order — often app first, then infra:
 
-| Typical key | Role |
-|-------------|------|
+| Typical key   | Role                                                       |
+| ------------- | ---------------------------------------------------------- |
 | `stop-server` | Kill dev server port (`fuser -k PORT/tcp` or app-specific) |
-| `db-down` | Stop DB containers |
+| `db-down`     | Stop DB containers                                         |
 
 Example: `["stop-server", "db-down"]`
 
@@ -230,8 +232,8 @@ Example: `["stop-server", "db-down"]`
 
 Hot-reload steps the menu exposes **while the app is running** — useful when a sibling app (e.g. a publish-server consumer) needs to pull a freshly built artifact without bouncing the server. Apps that omit it keep the previous behavior (only `stop` is offered while running).
 
-| Typical key | Role |
-|-------------|------|
+| Typical key | Role                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------- |
 | `republish` | Rebuild + republish artifacts to the running server (e.g. `pnpm build && pnpm publish:artifacts`) |
 
 Example: `["republish"]`
@@ -250,18 +252,18 @@ Every key listed in `workflows.republish` must exist in `commands` (validated by
 
 Every key referenced in `workflows` must exist in `commands`. Common entries:
 
-| Key | Example value | Notes |
-|-----|----------------|-------|
-| `up` | `pnpm dev` | Required |
-| `down` | `pnpm db:down` or `true` | Required |
-| `build` | `pnpm build` | Required |
-| `test` | `pnpm test` | Optional |
-| `db-up` | `pnpm db:up` | If using local DB |
-| `db-down` | `pnpm db:down` | If using local DB |
-| `migrate` | `pnpm db:migrate` | If using migrations |
-| `migrate-status` | `pnpm db:migrate:status` | If using migrations |
-| `stop-server` | `fuser -k 5000/tcp 2>/dev/null \|\| true` | Match your HTTP port |
-| `republish` | `pnpm build && pnpm publish:artifacts` | If using `workflows.republish` for hot reload |
+| Key              | Example value                             | Notes                                         |
+| ---------------- | ----------------------------------------- | --------------------------------------------- |
+| `up`             | `pnpm dev`                                | Required                                      |
+| `down`           | `pnpm db:down` or `true`                  | Required                                      |
+| `build`          | `pnpm build`                              | Required                                      |
+| `test`           | `pnpm test`                               | Optional                                      |
+| `db-up`          | `pnpm db:up`                              | If using local DB                             |
+| `db-down`        | `pnpm db:down`                            | If using local DB                             |
+| `migrate`        | `pnpm db:migrate`                         | If using migrations                           |
+| `migrate-status` | `pnpm db:migrate:status`                  | If using migrations                           |
+| `stop-server`    | `fuser -k 5000/tcp 2>/dev/null \|\| true` | Match your HTTP port                          |
+| `republish`      | `pnpm build && pnpm publish:artifacts`    | If using `workflows.republish` for hot reload |
 
 Use the project’s real package manager and script names.
 
@@ -305,18 +307,18 @@ Kickdesk reads this file when the **db** port is up; otherwise it may run `comma
 
 ## Subscriber checklist (execute in order)
 
-| Step | Who | Action |
-|------|-----|--------|
-| 1 | Human | Provide or confirm **`id`** and **`port_family`** ([DEV_PORTS.md](DEV_PORTS.md)); agent asks if missing |
-| 2 | Agent | Add `kickdesk.registration.json` with four `readonlyFiles` |
-| 3 | Agent | Add `scripts/kickdesk-manifest.*` with real ports/commands + `path` |
-| 4 | Agent | Add publish script → `~/.config/<app-id>/manifest.json` |
-| 5 | Agent | Add migrate-status script (if DB) → stdout + `migrate-status` file |
-| 6 | Agent | Wire `package.json` (or Makefile) publish/migrate scripts |
-| 7 | Agent | **Recommended:** `.cursor/rules/kickdesk.mdc` (template below); optional `AGENTS.md` section + README Kickdesk habits |
-| 8 | Human | Register app id in `~/.config/kickdesk/config.json` |
-| 9 | Human | Run publish + migrate-status |
-| 10 | Human | `kickdesk config validate --app <app-id>` |
+| Step | Who   | Action                                                                                                                |
+| ---- | ----- | --------------------------------------------------------------------------------------------------------------------- |
+| 1    | Human | Provide or confirm **`id`** and **`port_family`** ([DEV_PORTS.md](DEV_PORTS.md)); agent asks if missing               |
+| 2    | Agent | Add `kickdesk.registration.json` with four `readonlyFiles`                                                            |
+| 3    | Agent | Add `scripts/kickdesk-manifest.*` with real ports/commands + `path`                                                   |
+| 4    | Agent | Add publish script → `~/.config/<app-id>/manifest.json`                                                               |
+| 5    | Agent | Add migrate-status script (if DB) → stdout + `migrate-status` file                                                    |
+| 6    | Agent | Wire `package.json` (or Makefile) publish/migrate scripts                                                             |
+| 7    | Agent | **Recommended:** `.cursor/rules/kickdesk.mdc` (template below); optional `AGENTS.md` section + README Kickdesk habits |
+| 8    | Human | Register app id in `~/.config/kickdesk/config.json`                                                                   |
+| 9    | Human | Run publish + migrate-status                                                                                          |
+| 10   | Human | `kickdesk config validate --app <app-id>`                                                                             |
 
 ---
 
@@ -324,11 +326,11 @@ Kickdesk reads this file when the **db** port is up; otherwise it may run `comma
 
 Subscriber apps often duplicate this in README; minimal reference:
 
-| You did… | Run |
-|----------|-----|
-| Changed checkout `path`, dev ports, compose, workflow keys, or manifest command strings | `publish.manifest` from registration |
-| DB up, migrate, or pulled new migrations | `publish.migrateStatus` from registration |
-| Edited subscriber source and want a hot reload (app already running) | Kickdesk menu: `p` (or the republish step number) — runs `workflows.republish` |
+| You did…                                                                                | Run                                                                            |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Changed checkout `path`, dev ports, compose, workflow keys, or manifest command strings | `publish.manifest` from registration                                           |
+| DB up, migrate, or pulled new migrations                                                | `publish.migrateStatus` from registration                                      |
+| Edited subscriber source and want a hot reload (app already running)                    | Kickdesk menu: `p` (or the republish step number) — runs `workflows.republish` |
 
 Running **`migrate`** does not require re-publish unless manifest **command strings** or workflow keys changed.
 
@@ -389,13 +391,13 @@ Day-to-day when-to-run: app README Kickdesk section (e.g. `README.md#kickdesk-lo
 
 ### Adapting the template
 
-| Customize | Action |
-|-----------|--------|
-| `appId` / config dir | Match `kickdesk.registration.json` |
-| Manifest script extension | `.ts` or `.js` to match your repo |
-| `globs` | Add every file that is **source of truth** for dev ports and workflow scripts |
-| Step 4 | Keep only for DB apps; delete the “If no database” sentence when migrate applies |
-| README link | Point at your subscriber README anchor |
+| Customize                 | Action                                                                           |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| `appId` / config dir      | Match `kickdesk.registration.json`                                               |
+| Manifest script extension | `.ts` or `.js` to match your repo                                                |
+| `globs`                   | Add every file that is **source of truth** for dev ports and workflow scripts    |
+| Step 4                    | Keep only for DB apps; delete the “If no database” sentence when migrate applies |
+| README link               | Point at your subscriber README anchor                                           |
 
 **Reference subscribers:** `publicweb` (web + DB), `kickagent` (70xx tooling, no Kickdesk DB block).
 
