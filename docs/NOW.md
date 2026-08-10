@@ -89,7 +89,7 @@ Exit `0` for `ok` and `pending:N`; non-zero on unexpected failure (kickdesk show
 | Context | Keys |
 |---------|------|
 | Hub | `1`–`3` select app, `r` refresh, `q` quit |
-| App selected | `Space` next step, `Enter` all remaining, `1`–`N` run one step, `b`/`Esc` back, `c` catalog, `r` refresh, `q` quit |
+| App selected | `Space` next step, `Enter` all remaining, `1`–`N` run one step, `b`/`Esc` back, `c` catalog (letter/number run any command), `r` refresh, `q` quit |
 
 After each step, **any key** continues. After a full procedure, **any key** returns to the menu. Without a tmux profile, blocking commands (`up`, dev servers) open in a new GUI terminal when possible (`KICKDESK_TERMINAL` or auto-detect). With `-c` + `tmux.enabled`, they run in the named tmux pane (`kickdesk-<app-id>`, etc.). The `migrate` workflow step is omitted when **MIGRATE** is `ok` or `n/a`. Selected app row is highlighted in the hub table.
 

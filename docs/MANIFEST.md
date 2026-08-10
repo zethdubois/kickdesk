@@ -43,6 +43,8 @@ Publish must write `path` (typically the repo root used when publishing). If `st
 
 Apps that omit `workflows.republish` keep the previous behavior (only `stop` is offered while running).
 
+**Side services (not in start/stop/republish):** keep a command key in `commands` (e.g. `wiki`) so the menu catalog (`c`, then the key shown next to the command — often the first letter, e.g. `w` for wiki) can launch it without putting it on `workflows.start` or `workflows.republish`. Long-lived servers should use a distinct key (`wiki`, `standalone`) so Kickdesk opens them in a new terminal/tmux pane.
+
 Validation rules (same as `start` / `stop`):
 
 - Every key listed in `workflows.republish` must exist in `commands`.

@@ -264,8 +264,9 @@ Every key referenced in `workflows` must exist in `commands`. Common entries:
 | `migrate-status` | `pnpm db:migrate:status`                  | If using migrations                           |
 | `stop-server`    | `fuser -k 5000/tcp 2>/dev/null \|\| true` | Match your HTTP port                          |
 | `republish`      | `pnpm build && pnpm publish:artifacts`    | If using `workflows.republish` for hot reload |
+| `wiki`           | `pnpm kam:wiki` (example)                 | Optional side server — catalog `c` then number; not in `p` / republish |
 
-Use the project’s real package manager and script names.
+Use the project’s real package manager and script names. Optional side services (wiki, standalone) belong in `commands` and ports; launch them from the menu catalog rather than `workflows.start` unless they must always come up with the app.
 
 ### `status.migrate`
 

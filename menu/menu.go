@@ -158,7 +158,7 @@ func printFooter(appSelected bool, appCount int, hasRepublish bool, tmuxHint str
 		if hasRepublish {
 			republishHint = " · p republish all"
 		}
-		fmt.Printf("Space next (✓) · Enter all · 1-N run (✓ if next in order)%s · b back · c catalog · r refresh · q quit\n", republishHint)
+		fmt.Printf("Space next (✓) · Enter all · 1-N run (✓ if next in order)%s · b back · c catalog (key run) · r refresh · q quit\n", republishHint)
 	} else {
 		fmt.Printf("1-%d select app · r refresh · q quit\n", appCount)
 	}
@@ -291,20 +291,141 @@ func runStep(cfg *config.Config, appName, key string) error {
 	return run.Execute(cfg, appName, key)
 }
 
+// catalogNavKeys are reserved in the catalog screen (not used as run hotkeys).
+var catalogNavKeys = map[byte]bool{
+	'b': true, 'B': true,
+	'q': true, 'Q': true,
+	'r': true, 'R': true,
+	27: true, // Esc back
+}
+
+// catalogRunKeys is the ordered pool of single-key bindings for command rows.
+// Letters skip b/q/r so navigation still works with 10+ commands.
+func catalogRunKeys() []byte {
+	keys := []byte{'1', '2', '3', '4', '5', '6', '7', '8', '9'}
+	for c := byte('a'); c <= 'z'; c++ {
+		if catalogNavKeys[c] {
+			continue
+		}
+		keys = append(keys, c)
+	}
+	return keys
+}
+
+// assignCatalogKeys maps each command entry to a single hotkey.
+// Prefers the first letter of the command name when free (wiki → w); otherwise
+// takes the next free pool key so sidecars remain reachable past 9 entries.
+func assignCatalogKeys(entries []config.CommandEntry) []byte {
+	pool := catalogRunKeys()
+	used := make(map[byte]bool)
+	out := make([]byte, len(entries))
+	// Pass 1: prefer mnemonic first letter.
+	for i, e := range entries {
+		if e.Key == "" {
+			continue
+		}
+		pref := e.Key[0]
+		if pref >= 'A' && pref <= 'Z' {
+			pref += 'a' - 'A'
+		}
+		if pref >= 'a' && pref <= 'z' && !catalogNavKeys[pref] && !used[pref] {
+			out[i] = pref
+			used[pref] = true
+		}
+	}
+	// Pass 2: fill remaining from pool order.
+	pi := 0
+	for i := range entries {
+		if out[i] != 0 {
+			continue
+		}
+		for pi < len(pool) && used[pool[pi]] {
+			pi++
+		}
+		if pi >= len(pool) {
+			break // no more single-key slots
+		}
+		out[i] = pool[pi]
+		used[pool[pi]] = true
+		pi++
+	}
+	return out
+}
+
 // showCatalog returns true if the user chose to quit kickdesk.
+// While open, each listed command has a single-key hotkey (e.g. w = wiki).
 func showCatalog(cfg *config.Config, appName string, reader *bufio.Reader) bool {
-	clearScreen()
-	fmt.Printf("Commands — %s\n\n", appName)
-	entries, err := cfg.CommandsList(appName)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		return errors.Is(waitAnyKeyOrQuit(reader), errQuit)
+	for {
+		clearScreen()
+		fmt.Printf("Commands — %s\n\n", appName)
+		entries, err := cfg.CommandsList(appName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			return errors.Is(waitAnyKeyOrQuit(reader), errQuit)
+		}
+		hotkeys := assignCatalogKeys(entries)
+		byKey := make(map[byte]string, len(entries))
+		for i, e := range entries {
+			label := " "
+			if i < len(hotkeys) && hotkeys[i] != 0 {
+				label = string(hotkeys[i])
+				byKey[hotkeys[i]] = e.Key
+			}
+			hint := ""
+			if run.IsBlocking(e.Key, e.Shell) {
+				if _, ok := run.TmuxChildMode(); ok {
+					hint = "  (tmux pane)"
+				} else {
+					hint = "  (new terminal)"
+				}
+			}
+			fmt.Printf("  %s  %-14s  %s%s\n", label, e.Key, truncate(e.Shell, maxCmdDisplay), hint)
+		}
+		fmt.Println(strings.Repeat("─", 56))
+		if len(byKey) > 0 {
+			fmt.Println("key run · b back · r refresh · q quit")
+		} else {
+			fmt.Println("b back · r refresh · q quit")
+		}
+		fmt.Printf("kickdesk run %s <key>\n", appName)
+
+		key, err := readKey(reader)
+		if err != nil {
+			return errors.Is(err, errQuit)
+		}
+		fmt.Println()
+		switch {
+		case key == 'q' || key == 'Q':
+			return true
+		case key == 27 || key == 'b' || key == 'B':
+			return false
+		case key == 'r' || key == 'R':
+			continue
+		default:
+			// Normalize A–Z to a–z for mnemonic matches.
+			lookup := key
+			if lookup >= 'A' && lookup <= 'Z' {
+				lookup += 'a' - 'A'
+			}
+			if cmdKey, ok := byKey[lookup]; ok {
+				if err := runStep(cfg, appName, cmdKey); err != nil {
+					fmt.Fprintf(os.Stderr, "error: %v\n", err)
+				}
+				if werr := waitReturnToMenu(reader); errors.Is(werr, errQuit) {
+					return true
+				}
+				continue
+			}
+			hint := "Unknown key. b, r, or q."
+			if len(byKey) > 0 {
+				hint = "Unknown key. Use a listed key, b, r, or q."
+			}
+			fmt.Println(hint)
+			if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
+				return true
+			}
+		}
 	}
-	for _, e := range entries {
-		fmt.Printf("  %-12s  %s\n", e.Key, truncate(e.Shell, maxCmdDisplay))
-	}
-	fmt.Println("\n  kickdesk run", appName, "<key>")
-	return errors.Is(waitAnyKeyOrQuit(reader), errQuit)
 }
 
 func truncate(s string, max int) string {

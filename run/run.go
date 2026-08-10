@@ -74,11 +74,11 @@ func executeShell(dir, shell string) error {
 // IsBlocking reports whether a command is likely long-running.
 func IsBlocking(key, shell string) bool {
 	switch key {
-	case "up", "gateway":
+	case "up", "gateway", "wiki", "standalone":
 		return true
 	}
 	lower := strings.ToLower(shell)
-	for _, sub := range []string{" dev", "dev ", "run ", " serve", "serve-", "uvicorn", "vite"} {
+	for _, sub := range []string{" dev", "dev ", "run ", " serve", "serve-", "uvicorn", "vite", "kam:wiki"} {
 		if strings.Contains(lower, sub) {
 			return true
 		}
