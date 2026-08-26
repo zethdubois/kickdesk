@@ -62,6 +62,17 @@ Legacy monolithic config: [examples/config.legacy.json](examples/config.legacy.j
 **Install:**
 
 ```bash
-export PATH="$HOME/go/bin:$PATH"
-cd ~/projects/kickdesk && go install .
+cd ~/projects/kickdesk && ./install.sh
+```
+
+Builds the binary, symlinks `~/.local/bin/kickdesk`, and writes a marked block to `~/.bashrc` (`KICKDESK_ROOT` + PATH) so `kickdesk` runs from any directory. Re-run after pulling to rebuild. `./install.sh --uninstall` reverses it.
+
+If `go` 1.25+ is not on `PATH`, the installer downloads a user-local toolchain to `~/.local/share/kickdesk/go` (no sudo).
+
+This shell (bashrc applies to new shells):
+
+```bash
+hash -r
+export PATH="$HOME/.local/bin:$PATH"
+kickdesk config validate
 ```

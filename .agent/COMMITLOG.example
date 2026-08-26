@@ -1,0 +1,10 @@
+This file is the next git commit message (`git commit -F`). Keep it cumulative.
+
+Agents: **append** a short why after each slice of work. Do not replace the
+whole file with only the latest turn.
+
+After commit.sh succeeds, the file becomes `committed <timestamp>`. The next
+WIP should replace that stamp (or write below it).
+
+Example:
+Land fleet SSH so Cursor keeps one Host thin_host while LAN/ZT is only TCP.

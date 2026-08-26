@@ -33,3 +33,7 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# BEGIN proj-agents
+.agent/COMMITLOG
+# END proj-agents
