@@ -1,7 +1,7 @@
 {
   "apps": {
-    "publicweb": {
-      "label": "Public Web"
+    "kickstaff": {
+      "label": "Kickstaff"
     },
     "kickagent": {},
     "merch-api": {}

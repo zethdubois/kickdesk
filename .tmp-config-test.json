@@ -1,35 +1,26 @@
 {
-  "app_order": ["publicweb", "kickagent", "merch-api"],
+  "app_order": [
+    "kickstaff",
+    "kickagent",
+    "merch-api"
+  ],
   "apps": {
-    "publicweb": {
-      "path": "~/projects/publicweb",
-      "primary_port": 5000,
-      "ports": [5000],
-      "url": "http://localhost:5000",
-      "workflows": {
-        "start": ["db-up", "migrate", "up"],
-        "stop": ["stop-server", "db-down"]
-      },
-      "commands": {
-        "up": "pnpm dev",
-        "down": "pnpm db:down",
-        "build": "pnpm build",
-        "test": "pnpm check",
-        "db": "pnpm db:status",
-        "db-up": "pnpm db:up",
-        "db-down": "pnpm db:down",
-        "migrate": "pnpm db:migrate",
-        "stop-server": "fuser -k 5000/tcp 2>/dev/null || true"
-      }
-    },
     "kickagent": {
       "path": "~/projects/kickagent",
       "primary_port": 7099,
-      "ports": [7099],
+      "ports": [
+        7099
+      ],
       "url": "http://127.0.0.1:7099/manifest.json",
       "workflows": {
-        "start": ["build", "publish", "up"],
-        "stop": ["stop-server"]
+        "start": [
+          "build",
+          "publish",
+          "up"
+        ],
+        "stop": [
+          "stop-server"
+        ]
       },
       "commands": {
         "up": "pnpm serve-publish -- --dir publish --port 7099",
@@ -44,11 +35,22 @@
     "merch-api": {
       "path": "~/projects/merch-api",
       "primary_port": 8000,
-      "ports": [8000, 3000],
+      "ports": [
+        8000,
+        3000
+      ],
       "url": "http://localhost:8000/docs",
       "workflows": {
-        "start": ["db", "migrate", "up"],
-        "stop": ["stop-api", "stop-gateway", "down"]
+        "start": [
+          "db",
+          "migrate",
+          "up"
+        ],
+        "stop": [
+          "stop-api",
+          "stop-gateway",
+          "down"
+        ]
       },
       "commands": {
         "up": "make local-api-run",
@@ -62,6 +64,36 @@
         "gateway": "make local-gateway-run",
         "stop-api": "fuser -k 8000/tcp 2>/dev/null || true",
         "stop-gateway": "fuser -k 3000/tcp 2>/dev/null || true"
+      }
+    },
+    "kickstaff": {
+      "path": "~/projects/kickstaff",
+      "primary_port": 5000,
+      "ports": [
+        5000
+      ],
+      "url": "http://localhost:5000",
+      "workflows": {
+        "start": [
+          "db-up",
+          "migrate",
+          "up"
+        ],
+        "stop": [
+          "stop-server",
+          "db-down"
+        ]
+      },
+      "commands": {
+        "up": "pnpm dev",
+        "down": "pnpm db:down",
+        "build": "pnpm build",
+        "test": "pnpm check",
+        "db": "pnpm db:status",
+        "db-up": "pnpm db:up",
+        "db-down": "pnpm db:down",
+        "migrate": "pnpm db:migrate",
+        "stop-server": "fuser -k 5000/tcp 2>/dev/null || true"
       }
     }
   }

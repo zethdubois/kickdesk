@@ -60,7 +60,7 @@ Then read these paths **under that root** (readonly — requirements only, not y
 | 3     | `docs/MANIFEST.md`                    | Discovery rules, schema, operator registry/profiles       |
 | 4     | `docs/DEV_PORTS.md`                   | Org port-family reference — **human chooses family**      |
 
-**Optional reference implementation** (copy file layout and scripts, not ports): sibling checkout `../publicweb` if present on disk.
+**Optional reference implementation** (copy file layout and scripts, not ports): sibling checkout `../kickstaff` if present on disk.
 
 ---
 
@@ -125,7 +125,7 @@ Then map **repo truth** into `primary_port`, `ports[]`, and `url` — not from `
 
 ## App repo files to create
 
-Mirror the reference pattern (e.g. **publicweb**). Replace `<app-id>` everywhere.
+Mirror the reference pattern (e.g. **kickstaff**). Replace `<app-id>` everywhere.
 
 ### 1. `kickdesk.registration.json` (strict JSON)
 
@@ -400,7 +400,7 @@ Day-to-day when-to-run: app README Kickdesk section (e.g. `README.md#kickdesk-lo
 | Step 4                    | Keep only for DB apps; delete the “If no database” sentence when migrate applies |
 | README link               | Point at your subscriber README anchor                                           |
 
-**Reference subscribers:** `publicweb` (web + DB), `kickagent` (70xx tooling, no Kickdesk DB block).
+**Reference subscribers:** `kickstaff` (web + DB), `kickagent` (70xx tooling, no Kickdesk DB block).
 
 ### Agents and the Kickdesk repo
 
@@ -413,4 +413,4 @@ Day-to-day when-to-run: app README Kickdesk section (e.g. `README.md#kickdesk-lo
 
 ## Reference implementation
 
-**publicweb** (first full subscriber): `kickdesk.registration.json`, `scripts/kickdesk-manifest.ts`, `scripts/publish-kickdesk-manifest.ts`, `scripts/migrate-status.ts` — copy and adapt `app-id`, ports, and commands only.
+**kickstaff** (first full subscriber): `kickdesk.registration.json`, `scripts/kickdesk-manifest.ts`, `scripts/publish-kickdesk-manifest.ts`, `scripts/migrate-status.ts` — copy and adapt `app-id`, ports, and commands only.

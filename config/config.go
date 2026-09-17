@@ -10,7 +10,7 @@ import (
 
 const requiredCommands = "up, down, build"
 
-var defaultAppOrder = []string{"publicweb", "kickagent", "merch-api"}
+var defaultAppOrder = []string{"kickstaff", "kickagent", "merch-api"}
 
 // Config is the top-level kickdesk registry.
 type Config struct {
@@ -60,7 +60,7 @@ type CommandEntry struct {
 	Shell string
 }
 
-// OrderedAppNames returns apps in app_order (or default publicweb, kickagent, merch-api).
+// OrderedAppNames returns apps in app_order (or default kickstaff, kickagent, merch-api).
 func (c *Config) OrderedAppNames() []string {
 	if len(c.AppOrder) > 0 {
 		return append([]string(nil), c.AppOrder...)
