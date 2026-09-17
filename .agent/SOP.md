@@ -1,6 +1,6 @@
 # Agent SOP
 
-**SOP version:** 2
+**SOP version:** 4
 
 Portable procedure for humans and agents in any git project. Source of truth is the `future` repo (`~/projects/future/sop/`). The operator updates a project with:
 
@@ -44,7 +44,7 @@ Use a **WIP log + gated script** instead.
 
 | Who | Habit |
 |-----|--------|
-| **Agents** | After meaningful work, **append** a short *why* to `.agent/COMMITLOG` (gitignored). Never replace existing WIP text with only this turn. If the file is only `committed <timestamp>`, replace that stamp with the new why. Not a file dump. Do not run `commit.sh` unless asked — it needs a real TTY. |
+| **Agents** | After meaningful work, **append** a short *why* to `.agent/COMMITLOG` (gitignored). Prefix each entry with a source credit: **`[c]`** Cursor, **`[oc]`** OpenCode (optional **`[h]`** human). Never replace existing WIP text with only this turn. If the file is only `committed <timestamp>`, replace that stamp with the new why. Not a file dump. Do not run `commit.sh` unless asked — it needs a real TTY. |
 | **Humans** | `commit` (walks up to `commit.sh`) or `commit <name>` → `~/projects/<name>/commit.sh`. Dry-run, then y/n commit, then y/n push. |
 
 What the script runs (always from the git root):
