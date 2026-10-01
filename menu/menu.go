@@ -53,6 +53,7 @@ func showMenu(cfg *config.Config, version string, reader *bufio.Reader, state *m
 
 	appNames := cfg.OrderedAppNames()
 	var proc Procedure
+	var sides []SideService
 
 	if state.selected != "" {
 		if err := cfg.AppErrors[state.selected]; err != nil {
@@ -78,11 +79,12 @@ func showMenu(cfg *config.Config, version string, reader *bufio.Reader, state *m
 			if state.completed > len(proc.Keys) {
 				state.completed = len(proc.Keys)
 			}
-			printWorkflow(cfg, state.selected, proc, state.completed)
+			sides = ListSideServices(cfg, state.selected, running)
+			printWorkflow(cfg, state.selected, proc, state.completed, sides)
 		}
 	}
 
-	printFooter(state.selected != "", len(appNames), proc.HasRepublish(), tmuxTopHint(cfg))
+	printFooter(state.selected != "", len(appNames), proc.HasRepublish(), tmuxTopHint(cfg), sides)
 
 	key, err := readKey(reader)
 	if err != nil {
@@ -103,10 +105,10 @@ func showMenu(cfg *config.Config, version string, reader *bufio.Reader, state *m
 	if state.selected == "" {
 		return handleHubKey(cfg, reader, state, appNames, key)
 	}
-	return handleAppKey(cfg, reader, state, key, proc)
+	return handleAppKey(cfg, reader, state, key, proc, sides)
 }
 
-func printWorkflow(cfg *config.Config, appName string, proc Procedure, completed int) {
+func printWorkflow(cfg *config.Config, appName string, proc Procedure, completed int, sides []SideService) {
 	app := cfg.Apps[appName]
 	fmt.Printf("\n%s — %s procedure\n", appName, proc.Title)
 	fmt.Println(strings.Repeat("─", 56))
@@ -134,6 +136,29 @@ func printWorkflow(cfg *config.Config, appName string, proc Procedure, completed
 		}
 		fmt.Printf("  %s %-2d  %-10s  %s%s\n", mark, i+1, key, truncate(shell, maxCmdDisplay), hint)
 	}
+	if len(sides) > 0 {
+		fmt.Println("  Services")
+		for _, s := range sides {
+			shell := app.Commands[s.Key]
+			hint := ""
+			if run.IsBlocking(s.Key, shell) {
+				if _, ok := run.TmuxChildMode(); ok {
+					hint = "  (tmux pane)"
+				} else {
+					hint = "  (new terminal)"
+				}
+			}
+			state := "down"
+			if s.Up {
+				state = "up"
+			}
+			label := " "
+			if s.Hotkey != 0 {
+				label = string(s.Hotkey)
+			}
+			fmt.Printf("    %s  %-10s  %s%s  %s\n", label, s.Key, truncate(shell, maxCmdDisplay), hint, state)
+		}
+	}
 	fmt.Println(strings.Repeat("─", 56))
 }
 
@@ -149,7 +174,7 @@ func tmuxTopHint(cfg *config.Config) string {
 	return fmt.Sprintf("tmux top: %s", strings.Join(names[:topN], ", "))
 }
 
-func printFooter(appSelected bool, appCount int, hasRepublish bool, tmuxHint string) {
+func printFooter(appSelected bool, appCount int, hasRepublish bool, tmuxHint string, sides []SideService) {
 	if tmuxHint != "" {
 		fmt.Println(tmuxHint)
 	}
@@ -158,7 +183,11 @@ func printFooter(appSelected bool, appCount int, hasRepublish bool, tmuxHint str
 		if hasRepublish {
 			republishHint = " · p republish all"
 		}
-		fmt.Printf("Space next (✓) · Enter all · 1-N run (✓ if next in order)%s · b back · c catalog (key run) · r refresh · q quit\n", republishHint)
+		sideHint := ""
+		if h := sideFooterHint(sides); h != "" {
+			sideHint = " · " + h
+		}
+		fmt.Printf("Space next (✓) · Enter all · 1-N run (✓ if next in order)%s%s · b back · c catalog · r refresh · q quit\n", republishHint, sideHint)
 	} else {
 		fmt.Printf("1-%d select app · r refresh · q quit\n", appCount)
 	}
@@ -180,7 +209,7 @@ func handleHubKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ap
 	return nil
 }
 
-func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, key byte, proc Procedure) error {
+func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, key byte, proc Procedure, sides []SideService) error {
 	appName := state.selected
 	keys := proc.Keys
 
@@ -236,6 +265,15 @@ func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ke
 		}
 		return afterProcedureRun(reader, state)
 	default:
+		if side, ok := sideByHotkey(sides, key); ok {
+			if err := runStep(cfg, appName, side.Key); err != nil {
+				fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			}
+			if werr := waitReturnToMenu(reader); errors.Is(werr, errQuit) {
+				return errQuit
+			}
+			return nil
+		}
 		if key >= '1' && key <= '9' {
 			idx := int(key - '1')
 			if idx < len(keys) {
@@ -255,10 +293,14 @@ func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ke
 				return nil
 			}
 		}
-		hint := "Unknown key. Space, Enter, 1-N, c, b, r, or q."
+		hint := "Unknown key. Space, Enter, 1-N"
 		if proc.HasRepublish() {
-			hint = "Unknown key. Space, Enter, 1-N, p, c, b, r, or q."
+			hint += ", p"
 		}
+		if h := sideFooterHint(sides); h != "" {
+			hint += ", " + h
+		}
+		hint += ", c, b, r, or q."
 		fmt.Println(hint)
 		if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
 			return errQuit

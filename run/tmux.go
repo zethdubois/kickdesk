@@ -28,9 +28,10 @@ func TmuxChildMode() (topN int, ok bool) {
 	return n, true
 }
 
-// LaunchInTmuxPane runs shell in the named server pane for appName.
-// Returns true if the command was sent, false if app has no top-row pane.
-func LaunchInTmuxPane(cfg *config.Config, appName, dir, shell string) (bool, error) {
+// LaunchInTmuxPane runs shell in the tmux pane for this app command.
+// Primary "up" uses the app's dashboard pane. Other blocking commands (wiki,
+// discovery, …) get a dedicated pane so they do not Ctrl-C the publish server.
+func LaunchInTmuxPane(cfg *config.Config, appName, cmdKey, dir, shell string) (bool, error) {
 	topN, ok := TmuxChildMode()
 	if !ok {
 		return false, nil
@@ -46,13 +47,13 @@ func LaunchInTmuxPane(cfg *config.Config, appName, dir, shell string) (bool, err
 		return false, nil
 	}
 
-	target, err := tmux.PaneTargetForApp(appName)
+	target, err := tmux.PaneTargetForCommand(appName, cmdKey)
 	if err != nil {
 		return false, nil
 	}
 	script := fmt.Sprintf("cd %q && %s", dir, shell)
 
-	// Stop any running process in the pane, then start the command.
+	// Stop whatever is in this pane only — never the sibling service panes.
 	_ = tmuxRun("send-keys", "-t", target, "C-c", "")
 	if err := tmuxRun("send-keys", "-t", target, script, "C-m"); err != nil {
 		return false, err

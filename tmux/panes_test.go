@@ -5,6 +5,18 @@ import (
 	"testing"
 )
 
+func TestPaneTitle(t *testing.T) {
+	if got := PaneTitle("kickagent", "up"); got != "kickdesk-kickagent" {
+		t.Fatalf("up title = %q", got)
+	}
+	if got := PaneTitle("kickagent", ""); got != "kickdesk-kickagent" {
+		t.Fatalf("empty title = %q", got)
+	}
+	if got := PaneTitle("kickagent", "wiki"); got != "kickdesk-kickagent-wiki" {
+		t.Fatalf("wiki title = %q", got)
+	}
+}
+
 func TestBuildChildMenuCmd(t *testing.T) {
 	cmd := buildChildMenuCmd(2, "/usr/bin/kickdesk", "kam2", layoutResult{
 		menuID: "%1",

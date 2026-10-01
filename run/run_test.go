@@ -9,7 +9,7 @@ func TestIsBlocking(t *testing.T) {
 	}{
 		{"up", "pnpm serve-publish", true},
 		{"wiki", "pnpm kam:wiki", true},
-		{"standalone", "pnpm standalone", true},
+		{"discovery", "pnpm kam:discovery", true},
 		{"build", "pnpm build", false},
 		{"down", "true", false},
 		{"republish", "pnpm build && pnpm publish:artifacts", false},

@@ -14,6 +14,48 @@ func PaneEnvKey(name string) string {
 	return paneEnvPrefix + strings.ReplaceAll(name, "-", "_")
 }
 
+// PaneTitle is the tmux pane title for an app command.
+// "up" (and empty) use the dashboard pane kickdesk-<app>; extras use
+// kickdesk-<app>-<key> so wiki/discovery do not share the publish pane.
+func PaneTitle(app, cmdKey string) string {
+	if cmdKey == "" || cmdKey == "up" {
+		return paneName(app)
+	}
+	return paneName(app) + "-" + cmdKey
+}
+
+// PaneTargetForCommand returns the pane to run cmdKey in, creating a split
+// off the app's primary pane when a side service pane does not exist yet.
+func PaneTargetForCommand(app, cmdKey string) (string, error) {
+	title := PaneTitle(app, cmdKey)
+	if id, err := FindPaneByTitle(title); err == nil {
+		return id, nil
+	}
+	if cmdKey == "" || cmdKey == "up" {
+		return PaneTargetForApp(app)
+	}
+	return createSidePane(app, cmdKey)
+}
+
+func createSidePane(app, cmdKey string) (string, error) {
+	parent, err := PaneTargetForApp(app)
+	if err != nil {
+		return "", err
+	}
+	out, err := runOut("split-window", "-d", "-v", "-t", parent, "-P", "-F", "#{pane_id}")
+	if err != nil {
+		return "", fmt.Errorf("split side pane %s/%s: %w", app, cmdKey, err)
+	}
+	id := strings.TrimSpace(out)
+	if id == "" {
+		return "", fmt.Errorf("split side pane %s/%s: empty pane id", app, cmdKey)
+	}
+	if err := run("select-pane", "-t", id, "-T", PaneTitle(app, cmdKey)); err != nil {
+		return "", err
+	}
+	return id, nil
+}
+
 // PaneTargetForApp resolves the tmux -t target for an app (env, then title lookup).
 func PaneTargetForApp(app string) (string, error) {
 	if id := os.Getenv(PaneEnvKey(app)); id != "" {

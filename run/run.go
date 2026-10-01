@@ -24,7 +24,7 @@ func Execute(cfg *config.Config, appName, key string) error {
 		return err
 	}
 	if IsBlocking(key, shell) {
-		sent, tmuxErr := LaunchInTmuxPane(cfg, appName, dir, shell)
+		sent, tmuxErr := LaunchInTmuxPane(cfg, appName, key, dir, shell)
 		if tmuxErr != nil {
 			return tmuxErr
 		}
@@ -74,7 +74,7 @@ func executeShell(dir, shell string) error {
 // IsBlocking reports whether a command is likely long-running.
 func IsBlocking(key, shell string) bool {
 	switch key {
-	case "up", "gateway", "wiki", "standalone":
+	case "up", "gateway", "wiki", "standalone", "discovery":
 		return true
 	}
 	lower := strings.ToLower(shell)
