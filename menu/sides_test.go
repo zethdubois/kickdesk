@@ -18,11 +18,12 @@ func agentApp(t *testing.T) *config.Config {
 					{Role: "standalone", Port: 7098},
 					{Role: "wiki", Port: 7097},
 					{Role: "discovery", Port: 7096},
+					{Role: "progress", Port: 7095},
 					{Role: "db", Port: 7043},
 				},
 				Workflows: config.Workflows{
 					Start:     []string{"install", "build", "up"},
-					Stop:      []string{"stop-server", "stop-wiki", "stop-discovery", "down"},
+					Stop:      []string{"stop-server", "stop-wiki", "stop-discovery", "stop-progress", "down"},
 					Republish: []string{"republish"},
 				},
 				Commands: map[string]string{
@@ -35,6 +36,8 @@ func agentApp(t *testing.T) *config.Config {
 					"stop-wiki":      "true",
 					"discovery":      "pnpm kam:discovery",
 					"stop-discovery": "true",
+					"progress":       "pnpm kam:progress",
+					"stop-progress":  "true",
 					"republish":      "true",
 				},
 			},
@@ -63,6 +66,12 @@ func TestListSideServices_wikiStartWhilePublishUp(t *testing.T) {
 	}
 	if got["discovery"].Hotkey != 'd' {
 		t.Fatalf("discovery hotkey = %q", got["discovery"].Hotkey)
+	}
+	if _, ok := got["progress"]; !ok {
+		t.Fatalf("expected progress start, got %+v", sides)
+	}
+	if got["progress"].Hotkey != 'p' {
+		t.Fatalf("progress hotkey = %q, want p (republish is u)", got["progress"].Hotkey)
 	}
 	if _, ok := got["stop-wiki"]; ok {
 		t.Fatal("stop-wiki is already a shutdown step; should not duplicate in Services")

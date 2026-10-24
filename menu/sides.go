@@ -16,7 +16,7 @@ var inspectorReservedKeys = map[byte]bool{
 	'r': true, 'R': true,
 	'b': true, 'B': true,
 	'c': true, 'C': true,
-	'p': true, 'P': true, // republish
+	'u': true, 'U': true, // republish all
 	27: true,
 }
 

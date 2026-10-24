@@ -15,8 +15,8 @@ func PaneEnvKey(name string) string {
 }
 
 // PaneTitle is the tmux pane title for an app command.
-// "up" (and empty) use the dashboard pane kickdesk-<app>; extras use
-// kickdesk-<app>-<key> so wiki/discovery do not share the publish pane.
+// "up" (and empty) use the dashboard pane kickdesk-<app>. Side-service
+// titles (kickdesk-<app>-<key>) remain for any legacy splits still present.
 func PaneTitle(app, cmdKey string) string {
 	if cmdKey == "" || cmdKey == "up" {
 		return paneName(app)
@@ -24,8 +24,9 @@ func PaneTitle(app, cmdKey string) string {
 	return paneName(app) + "-" + cmdKey
 }
 
-// PaneTargetForCommand returns the pane to run cmdKey in, creating a split
-// off the app's primary pane when a side service pane does not exist yet.
+// PaneTargetForCommand returns the pane to run cmdKey in. Primary "up" uses
+// the app pane. Other keys still resolve or create a side split if called;
+// Execute prefers a GUI terminal or WindowTargetForCommand for side services.
 func PaneTargetForCommand(app, cmdKey string) (string, error) {
 	title := PaneTitle(app, cmdKey)
 	if id, err := FindPaneByTitle(title); err == nil {
@@ -35,6 +36,17 @@ func PaneTargetForCommand(app, cmdKey string) (string, error) {
 		return PaneTargetForApp(app)
 	}
 	return createSidePane(app, cmdKey)
+}
+
+// WindowTargetForCommand returns a pane in a dedicated tmux window (tab) for
+// a side service, creating the window when needed. Does not split the
+// dashboard layout.
+func WindowTargetForCommand(app, cmdKey string) (string, error) {
+	title := PaneTitle(app, cmdKey)
+	if id, err := FindPaneByTitleInSession(title); err == nil {
+		return id, nil
+	}
+	return createSideWindow(app, cmdKey)
 }
 
 func createSidePane(app, cmdKey string) (string, error) {
@@ -49,6 +61,22 @@ func createSidePane(app, cmdKey string) (string, error) {
 	id := strings.TrimSpace(out)
 	if id == "" {
 		return "", fmt.Errorf("split side pane %s/%s: empty pane id", app, cmdKey)
+	}
+	if err := run("select-pane", "-t", id, "-T", PaneTitle(app, cmdKey)); err != nil {
+		return "", err
+	}
+	return id, nil
+}
+
+func createSideWindow(app, cmdKey string) (string, error) {
+	name := app + "-" + cmdKey
+	out, err := runOut("new-window", "-d", "-n", name, "-P", "-F", "#{pane_id}")
+	if err != nil {
+		return "", fmt.Errorf("new window %s/%s: %w", app, cmdKey, err)
+	}
+	id := strings.TrimSpace(out)
+	if id == "" {
+		return "", fmt.Errorf("new window %s/%s: empty pane id", app, cmdKey)
 	}
 	if err := run("select-pane", "-t", id, "-T", PaneTitle(app, cmdKey)); err != nil {
 		return "", err
@@ -71,6 +99,16 @@ func FindPaneByTitle(title string) (string, error) {
 		return "", err
 	}
 	out, err := runOut("list-panes", "-t", win, "-F", "#{pane_id} #{pane_title}")
+	return findPaneByTitle(out, err, title)
+}
+
+// FindPaneByTitleInSession finds a pane anywhere in the current session by title.
+func FindPaneByTitleInSession(title string) (string, error) {
+	out, err := runOut("list-panes", "-s", "-F", "#{pane_id} #{pane_title}")
+	return findPaneByTitle(out, err, title)
+}
+
+func findPaneByTitle(out string, err error, title string) (string, error) {
 	if err != nil {
 		return "", err
 	}

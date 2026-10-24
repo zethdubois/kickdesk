@@ -13,6 +13,8 @@ import (
 )
 
 // readKey reads one key (TTY: raw, no Enter; otherwise: line with prompt on stderr).
+// While waiting, the tty is in raw mode: Ctrl+C is not SIGINT (it is byte 3 = quit
+// once the read receives it). A wedged Read therefore looks like a "frozen" menu.
 func readKey(reader *bufio.Reader) (byte, error) {
 	tty, err := inputTTY()
 	if err != nil || !term.IsTerminal(int(tty.Fd())) {
@@ -72,20 +74,27 @@ func readKeyRaw(fd int, r io.Reader) (byte, error) {
 	return key, nil
 }
 
+// drainReader consumes the rest of an escape/CSI sequence after ESC.
+// If SetReadDeadline is unavailable on this tty, it returns immediately —
+// a blocking Read here used to wedge the menu forever (keys and Ctrl+C
+// appear dead because MakeRaw disables ISIG; Ctrl+C is only byte 3).
 func drainReader(fd int, r io.Reader, wait time.Duration) {
-	if f, ok := r.(*os.File); ok {
-		_ = f.SetReadDeadline(time.Now().Add(wait))
-		buf := make([]byte, 16)
-		for {
-			n, err := r.Read(buf)
-			if err != nil || n == 0 {
-				break
-			}
-		}
-		_ = f.SetReadDeadline(time.Time{})
+	f, ok := r.(*os.File)
+	if !ok {
+		_ = fd
 		return
 	}
-	_ = fd
+	if err := f.SetReadDeadline(time.Now().Add(wait)); err != nil {
+		return
+	}
+	defer func() { _ = f.SetReadDeadline(time.Time{}) }()
+	buf := make([]byte, 64)
+	for {
+		n, err := f.Read(buf)
+		if err != nil || n == 0 {
+			return
+		}
+	}
 }
 
 func flushScreen() {

@@ -8,9 +8,21 @@ import (
 	"strings"
 )
 
+// HasGUIDisplay reports whether a GUI terminal can open a visible window.
+// Without DISPLAY/WAYLAND_DISPLAY, emulators like kitty Start() then die as
+// zombies and the server never listens — thinclient sees nothing.
+func HasGUIDisplay() bool {
+	return strings.TrimSpace(os.Getenv("DISPLAY")) != "" ||
+		strings.TrimSpace(os.Getenv("WAYLAND_DISPLAY")) != ""
+}
+
 // LaunchInTerminal starts shell in a new terminal window (fire-and-forget).
-// Returns true if a terminal was launched, false if none found (caller should fall back).
+// Returns true if a terminal was launched, false if none found or no display
+// (caller should fall back — e.g. tmux new-window).
 func LaunchInTerminal(dir, shell string) (bool, error) {
+	if !HasGUIDisplay() {
+		return false, nil
+	}
 	emulator, args := terminalCommand(dir, shell)
 	if emulator == "" {
 		return false, nil

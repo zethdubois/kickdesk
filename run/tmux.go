@@ -28,9 +28,9 @@ func TmuxChildMode() (topN int, ok bool) {
 	return n, true
 }
 
-// LaunchInTmuxPane runs shell in the tmux pane for this app command.
-// Primary "up" uses the app's dashboard pane. Other blocking commands (wiki,
-// discovery, …) get a dedicated pane so they do not Ctrl-C the publish server.
+// LaunchInTmuxPane runs shell in the app's primary dashboard pane (kickdesk-<app>).
+// Callers should only use this for primary "up". Side services use
+// LaunchInTerminal or LaunchInTmuxWindow.
 func LaunchInTmuxPane(cfg *config.Config, appName, cmdKey, dir, shell string) (bool, error) {
 	topN, ok := TmuxChildMode()
 	if !ok {
@@ -51,9 +51,24 @@ func LaunchInTmuxPane(cfg *config.Config, appName, cmdKey, dir, shell string) (b
 	if err != nil {
 		return false, nil
 	}
-	script := fmt.Sprintf("cd %q && %s", dir, shell)
+	return sendToTmuxTarget(target, dir, shell)
+}
 
-	// Stop whatever is in this pane only — never the sibling service panes.
+// LaunchInTmuxWindow runs shell in a dedicated tmux window (tab) named for the
+// app command. Used for side services when no GUI display is available.
+func LaunchInTmuxWindow(appName, cmdKey, dir, shell string) (bool, error) {
+	if _, ok := TmuxChildMode(); !ok && !tmux.Active() {
+		return false, nil
+	}
+	target, err := tmux.WindowTargetForCommand(appName, cmdKey)
+	if err != nil {
+		return false, nil
+	}
+	return sendToTmuxTarget(target, dir, shell)
+}
+
+func sendToTmuxTarget(target, dir, shell string) (bool, error) {
+	script := fmt.Sprintf("cd %q && %s", dir, shell)
 	_ = tmuxRun("send-keys", "-t", target, "C-c", "")
 	if err := tmuxRun("send-keys", "-t", target, script, "C-m"); err != nil {
 		return false, err

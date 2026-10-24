@@ -91,7 +91,7 @@ Exit `0` for `ok` and `pending:N`; non-zero on unexpected failure (kickdesk show
 | Hub | `1`–`3` select app, `r` refresh, `q` quit |
 | App selected | `Space` next step, `Enter` all remaining, `1`–`N` run one step, letter keys for extra **Services** (wiki, …), `b`/`Esc` back, `c` catalog, `r` refresh, `q` quit |
 
-After each step, **any key** continues. After a full procedure, **any key** returns to the menu. Without a tmux profile, blocking commands (`up`, dev servers) open in a new GUI terminal when possible (`KICKDESK_TERMINAL` or auto-detect). With `-c` + `tmux.enabled`, they run in the named tmux pane (`kickdesk-<app-id>`, etc.). The `migrate` workflow step is omitted when **MIGRATE** is `ok` or `n/a`. Selected app row is highlighted in the hub table.
+After each step, **any key** continues. After a full procedure, **any key** returns to the menu. Primary **`up`** runs in the app’s dashboard tmux pane when `-c` + `tmux.enabled`; otherwise it opens a new GUI terminal (`KICKDESK_TERMINAL` or auto-detect). Side services (wiki, discovery, progress, …) open in a new OS terminal when `DISPLAY`/`WAYLAND_DISPLAY` is set; otherwise in a new tmux window (tab) so headless thin_host sessions still bind the port. **`u`** = republish all; **`p`** = progress when that Services row exists. The `migrate` workflow step is omitted when **MIGRATE** is `ok` or `n/a`. Selected app row is highlighted in the hub table.
 
 Config adds `app_order`, `primary_port`, and per-app `workflows.start` / `workflows.stop` (ordered command keys).
 

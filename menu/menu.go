@@ -128,11 +128,7 @@ func printWorkflow(cfg *config.Config, appName string, proc Procedure, completed
 		}
 		hint := ""
 		if run.IsBlocking(key, shell) {
-			if _, ok := run.TmuxChildMode(); ok {
-				hint = "  (tmux pane)"
-			} else {
-				hint = "  (new terminal)"
-			}
+			hint = run.BlockingHint(key)
 		}
 		fmt.Printf("  %s %-2d  %-10s  %s%s\n", mark, i+1, key, truncate(shell, maxCmdDisplay), hint)
 	}
@@ -142,11 +138,7 @@ func printWorkflow(cfg *config.Config, appName string, proc Procedure, completed
 			shell := app.Commands[s.Key]
 			hint := ""
 			if run.IsBlocking(s.Key, shell) {
-				if _, ok := run.TmuxChildMode(); ok {
-					hint = "  (tmux pane)"
-				} else {
-					hint = "  (new terminal)"
-				}
+				hint = run.BlockingHint(s.Key)
 			}
 			state := "down"
 			if s.Up {
@@ -181,7 +173,7 @@ func printFooter(appSelected bool, appCount int, hasRepublish bool, tmuxHint str
 	if appSelected {
 		republishHint := ""
 		if hasRepublish {
-			republishHint = " · p republish all"
+			republishHint = " · u republish all"
 		}
 		sideHint := ""
 		if h := sideFooterHint(sides); h != "" {
@@ -223,7 +215,7 @@ func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ke
 			return errQuit
 		}
 		return nil
-	case 'p', 'P':
+	case 'u', 'U':
 		if !proc.HasRepublish() {
 			fmt.Println("Republish is not configured for this app.")
 			if werr := waitAnyKeyOrQuit(reader); errors.Is(werr, errQuit) {
@@ -295,7 +287,7 @@ func handleAppKey(cfg *config.Config, reader *bufio.Reader, state *menuState, ke
 		}
 		hint := "Unknown key. Space, Enter, 1-N"
 		if proc.HasRepublish() {
-			hint += ", p"
+			hint += ", u"
 		}
 		if h := sideFooterHint(sides); h != "" {
 			hint += ", " + h
@@ -324,11 +316,7 @@ func runStep(cfg *config.Config, appName, key string) error {
 	fmt.Printf("\n── %s / %s ──\n", appName, key)
 	fmt.Printf("$ %s\n\n", shell)
 	if run.IsBlocking(key, shell) {
-		if _, ok := run.TmuxChildMode(); ok {
-			fmt.Println("(runs in tmux server pane above)")
-		} else {
-			fmt.Println("(opens in a new terminal when supported)")
-		}
+		fmt.Println(strings.TrimSpace(run.BlockingHint(key)))
 	}
 	return run.Execute(cfg, appName, key)
 }
@@ -415,11 +403,7 @@ func showCatalog(cfg *config.Config, appName string, reader *bufio.Reader) bool 
 			}
 			hint := ""
 			if run.IsBlocking(e.Key, e.Shell) {
-				if _, ok := run.TmuxChildMode(); ok {
-					hint = "  (tmux pane)"
-				} else {
-					hint = "  (new terminal)"
-				}
+				hint = run.BlockingHint(e.Key)
 			}
 			fmt.Printf("  %s  %-14s  %s%s\n", label, e.Key, truncate(e.Shell, maxCmdDisplay), hint)
 		}

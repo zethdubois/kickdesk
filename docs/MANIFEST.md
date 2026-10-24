@@ -38,12 +38,12 @@ Publish must write `path` (typically the repo root used when publishing). If `st
 
 - Numbering is continuous 1..N across `stop` and `republish` (Shutdown subsection first, then Republish).
 - Pressing the numeric key for a republish step runs **only** that step (it does not run `stop-server` first).
-- The convenience key **`p`** runs every `workflows.republish` step in sequence (and does not run `stop`).
+- The convenience key **`u`** runs every `workflows.republish` step in sequence (and does not run `stop`).
 - The procedure title becomes `Shutdown · Republish` when republish is defined.
 
 Apps that omit `workflows.republish` keep the previous behavior (only `stop` is offered while running).
 
-**Side services (not in start/stop/republish):** give extra ports a **role** that matches a command key (e.g. port role `wiki` + `commands.wiki`). The app inspector shows a **Services** row for those ports: letter key starts the service when that port is down (wiki → **`w`**), independent of whether the primary port is up. Stop commands (`stop-wiki`) stay on `workflows.stop` and are not duplicated in Services while the primary is running. Catalog **`c`** still lists every command. Long-lived extras should use a distinct key (`wiki`, `standalone`, `discovery`) so Kickdesk opens them in a new terminal/tmux pane.
+**Side services (not in start/stop/republish):** give extra ports a **role** that matches a command key (e.g. port role `wiki` + `commands.wiki`). The app inspector shows a **Services** row for those ports: letter key starts the service when that port is down (wiki → **`w`**, progress → **`p`**), independent of whether the primary port is up. Stop commands (`stop-wiki`) stay on `workflows.stop` and are not duplicated in Services while the primary is running. Catalog **`c`** still lists every command. Long-lived extras should use a distinct key (`wiki`, `standalone`, `discovery`, `progress`): with a GUI display they open in a **new OS terminal**; on a headless thin_host (no `DISPLAY`) they open in a **new tmux window** (tab) in the Kickdesk session. Only primary **`up`** uses the app’s dashboard pane — side services do not split that pane. Convenience key **`u`** runs every `workflows.republish` step (was **`p`**; **`p`** is progress when that service exists).
 
 Validation rules (same as `start` / `stop`):
 
