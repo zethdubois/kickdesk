@@ -9,6 +9,9 @@
 #   git add -A          # new, modified, deleted — whole tree
 #   git commit -F log   # message = .agent/COMMITLOG (not -am)
 #
+# In the future (fleet hub) repo only: after a successful commit, copy
+# sop/harness/SOP.md → ~/fleet/harness/SOP.md so Syncthing can spread it.
+#
 # Usage: ./commit.sh   or:  commit <project>
 #
 set -euo pipefail
@@ -17,6 +20,23 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 LOG="${ROOT}/.agent/COMMITLOG"
 EXAMPLE="${ROOT}/.agent/COMMITLOG.example"
+HARNESS_SOP_SRC="${ROOT}/sop/harness/SOP.md"
+FLEET_SOP="${HOME}/fleet/harness/SOP.md"
+
+# future hub only — no-op in other projects (no sop/harness/SOP.md).
+sync_fleet_sop_after_commit() {
+  [ -f "$HARNESS_SOP_SRC" ] || return 0
+  if [ ! -d "$(dirname "$FLEET_SOP")" ]; then
+    echo "skip  fleet SOP sync (no $(dirname "$FLEET_SOP") — Syncthing harness later)"
+    return 0
+  fi
+  if [ -f "$FLEET_SOP" ] && cmp -s "$HARNESS_SOP_SRC" "$FLEET_SOP"; then
+    echo "ok    ~/fleet/harness/SOP.md already matches sop/harness/SOP.md"
+    return 0
+  fi
+  cp "$HARNESS_SOP_SRC" "$FLEET_SOP"
+  echo "synced sop/harness/SOP.md → ${FLEET_SOP}"
+}
 
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo >&2 "error: ${ROOT} is not a git repo"
@@ -92,6 +112,8 @@ git commit -F "$LOG"
 stamp="$(date '+%Y-%m-%d %H:%M:%S %z')"
 printf 'committed %s\n' "$stamp" >"$LOG"
 echo "COMMITLOG reset to: committed ${stamp}"
+
+sync_fleet_sop_after_commit
 
 if ! ask "Push to remote? [y/N] "; then
   echo "done (not pushed)"
