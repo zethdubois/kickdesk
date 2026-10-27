@@ -4,10 +4,12 @@
 |------|----------|------|
 | `COMMITLOG` | **no** (gitignored) | WIP commit message; agents keep it current |
 | `COMMITLOG.example` | yes | Template if COMMITLOG is missing |
-| `SOP.md` | yes | Portable agent SOP (now/plan, commit, closing a phase) |
+| `SOP.md` | yes | Stub → default SOP at `~/fleet/harness/SOP.md` |
 | `SOP_VERSION` | yes | Installed pack version (`version=N`) |
 | `../commit.sh` | yes | Human-gated `git add -A` + `git commit -F COMMITLOG` |
 
-**Agents:** after any meaningful change, **append** *why* to `COMMITLOG` (not a file dump). Prefix each entry: **`[c]`** Cursor, **`[oc]`** OpenCode (optional **`[h]`** human). Do not overwrite other WIP lines. Replace the file only when it is a lone `committed <timestamp>` stamp. Follow `SOP.md`. Do not run `commit.sh` unless the human asks — it prompts on a real TTY.
+**Default SOP:** `~/fleet/harness/SOP.md` (fleet-wide). **Overrides:** project `AGENTS.md`.
 
-**Humans:** `commit` or `commit <project>` (after future `./install.sh`). Update this pack with `proj-agents install <dir>` from `~/projects/future`.
+**Agents:** after any meaningful change, **append** *why* to `COMMITLOG` (not a file dump). Prefix each entry: **`[c]`** Cursor, **`[oc]`** OpenCode (optional **`[h]`** human). Do not overwrite other WIP lines. Replace the file only when it is a lone `committed <timestamp>` stamp. Do **not** run `commit.sh` or git mutations unless the human grants permission in this conversation.
+
+**Humans:** `commit` or `commit <project>` (after future `./install.sh`). Refresh harness SOP: `proj-agents harness`. Update project stubs when `sop/VERSION` bumps: `proj-agents install <dir>`.

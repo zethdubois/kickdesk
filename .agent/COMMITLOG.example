@@ -9,8 +9,10 @@ line (or paragraph) with a source credit:
 
 Do not replace the whole file with only the latest turn.
 
-After commit.sh succeeds, the file becomes `committed <timestamp>`. The next
+After a human runs commit.sh, the file becomes `committed <timestamp>`. The next
 WIP should replace that stamp (or write below it).
+
+Agents: do not run commit.sh or git mutations unless the human grants permission.
 
 Example:
 [c] Land fleet SSH so Cursor keeps one Host thin_host while LAN/ZT is only TCP.
